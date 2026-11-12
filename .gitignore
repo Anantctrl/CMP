@@ -1,0 +1,53 @@
+# --- Secrets / local config (never commit) ---
+.env
+.env.*
+!.env.example
+
+# --- Dependencies ---
+node_modules/
+
+# --- Build output ---
+target/
+build/
+out/
+dist/
+dist-ssr/
+*.tsbuildinfo
+*.jar
+!**/src/main/**/gradle-wrapper.jar
+
+# --- Logs ---
+logs/
+*.log
+
+# --- Archives / dumps ---
+*.zip
+*.dump
+*.sql.gz
+
+# --- IDE / editor ---
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.iml
+*.iws
+*.ipr
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Spring local profiles ---
+src/main/resources/application-dev.yml
+src/main/resources/application-local.yml
+
+# --- Local documentation / API scratch (kept on disk, not published) ---
+README.md
+frontend/README.md
+backend/src/main/java/com/substring/auth/app/auth/postman/
+backend/src/main/java/com/substring/auth/app/auth/.postman/

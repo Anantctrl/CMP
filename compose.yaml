@@ -1,0 +1,93 @@
+
+services:
+  # MySQL - Existing authentication project
+  mysql:
+    image: mysql:8.4
+    container_name: auth-mysql
+    environment:
+      MYSQL_DATABASE: auth_app_yt
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./compose/mysql/init:/docker-entrypoint-initdb.d:ro
+    restart: unless-stopped
+
+  # PostgreSQL - CopMap database
+  postgres:
+    image: postgres:16-alpine
+    container_name: copmap-postgres
+    environment:
+      POSTGRES_DB: copmap
+      POSTGRES_USER: copmap_app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432"
+    networks:
+      - copmap-net
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # Redis - CopMap cache
+  redis:
+    image: redis:7-alpine
+    container_name: copmap-redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    networks:
+      - copmap-net
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Spring Boot - CopMap API
+  api:
+    image: copmap-api:latest
+    container_name: copmap-api
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SERVER_PORT: "8080"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/copmap
+      SPRING_DATASOURCE_USERNAME: copmap_app
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+    ports:
+      - "8080:8080"
+    networks:
+      - copmap-net
+    volumes:
+      - pdf-storage:/app/pdf-storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  copmap-net:
+    name: copmap-network
+    driver: bridge
+
+volumes:
+  mysql-data:
+  postgres-data:
+    name: copmap-postgres-data
+  redis-data:
+  pdf-storage:
+    name: copmap-pdf-storage
