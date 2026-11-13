@@ -1,4 +1,4 @@
-import React, { StrictMode } from "react";
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
@@ -11,6 +11,8 @@ import RootLayout from "./pages/RootLayout.tsx";
 import Userlayout from "./pages/users/Userlayout.tsx";
 import Userhome from "./pages/users/Userhome.tsx";
 import Userprofile from "./pages/users/Userprofile.tsx";
+import TeamsDashboard from "./pages/teams/TeamsDashboard.tsx";
+import TeamDetailView from "./pages/teams/TeamDetailView.tsx";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -25,7 +27,8 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/dashboard" element={<Userlayout />}>
             <Route index element={<Userhome />} />
             <Route path="profile" element={<Userprofile />} />
-            {/* .... */}
+            <Route path="teams" element={<TeamsDashboard />} />
+            <Route path="teams/:teamId" element={<TeamDetailView />} />
           </Route>
         </Route>
       </Routes>

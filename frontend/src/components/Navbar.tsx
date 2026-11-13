@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "./ui/button";
@@ -8,6 +7,7 @@ import {
   Avatar,
   AvatarFallback,
 } from "@/components/ui/avatar";
+
 type Theme = "light" | "dark";
 const THEME_STORAGE_KEY = "cmp-theme";
 
@@ -37,16 +37,14 @@ function Navbar() {
 
   return (
     <nav className="flex w-full flex-col items-center justify-between gap-4 border-b border-gray-700 py-5 md:h-14 md:flex-row md:py-0 md:px-6">
-
       <div className="font-semibold items-center flex gap-2">
-        <span className="inline-block text-center h-6 w-6 rounded-md bg-gradient-to-r from-primary to-primary/40">
+        <span className="inline-block text-center h-6 w-6 rounded-md bg-gradient-to-r from-primary to-primary/40 font-bold text-white leading-6">
           C
         </span>
-        <span className="text-base tracking-tight">CMP</span>
+        <span className="text-base tracking-tight font-bold">CopMap</span>
       </div>
 
       <div className="flex gap-4 items-center">
-
         <Button
           type="button"
           size="icon"
@@ -60,22 +58,35 @@ function Navbar() {
             )
           }
         >
-          {theme === "dark" ? <Sun /> : <Moon />}
+          {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </Button>
 
         {isLoggedIn ? (
           <>
-          <NavLink to="/dashboard/profile" title="My Profile">
-          <Avatar className="border-2 border-[#F5F5DC] hover:scale-110 transition-transform duration-300 cursor-pointer">
-            <AvatarFallback className="bg-primary text-primary-foreground font-bold text-lg">
-              {user?.name?.charAt(0).toUpperCase() ?? "U"}
-            </AvatarFallback>
-          </Avatar>
-        </NavLink>
+            <NavLink to="/dashboard" title="Dashboard">
+              <Button size="sm" className="cursor-pointer" variant="ghost">
+                Overview
+              </Button>
+            </NavLink>
+
+            <NavLink to="/dashboard/teams" title="Tactical Teams">
+              <Button size="sm" className="cursor-pointer" variant="outline">
+                Tactical Teams
+              </Button>
+            </NavLink>
+
+            <NavLink to="/dashboard/profile" title="My Profile">
+              <Avatar className="border-2 border-primary hover:scale-105 transition-transform duration-200 cursor-pointer">
+                <AvatarFallback className="bg-primary text-primary-foreground font-bold text-sm">
+                  {user?.name?.charAt(0).toUpperCase() ?? "U"}
+                </AvatarFallback>
+              </Avatar>
+            </NavLink>
+
             <Button
               onClick={handleLogout}
               size="sm"
-              className="ml-auto cursor-pointer"
+              className="cursor-pointer"
               variant="destructive"
             >
               Logout
@@ -102,7 +113,6 @@ function Navbar() {
             </NavLink>
           </>
         )}
-
       </div>
     </nav>
   );

@@ -20,10 +20,7 @@ public class CurrentOfficerService {
         this.officerRepository = officerRepository;
     }
 
-    @Transactional(
-            readOnly = true,
-            transactionManager = "postgresTransactionManager"
-    )
+    @Transactional(transactionManager = "postgresTransactionManager")
     public OfficerProfile getCurrentOfficer() {
 
         Authentication authentication =
@@ -37,9 +34,34 @@ public class CurrentOfficerService {
             );
         }
 
-        return officerRepository.findByMysqlUserId(user.getId())
+        OfficerProfile profile = officerRepository.findByMysqlUserId(user.getId())
+                .orElseGet(() -> {
+                    OfficerProfile newProfile = new OfficerProfile();
+                    newProfile.setMysqlUserId(user.getId());
+                    newProfile.setOfficerName(user.getName());
+                    String desig = (user.getPolicePost() != null && !user.getPolicePost().isBlank())
+                            ? user.getPolicePost().trim()
+                            : "Officer";
+                    newProfile.setDesignation(desig);
+                    return officerRepository.save(newProfile);
+                });
+
+        if ((profile.getOfficerName() == null || profile.getOfficerName().isBlank()) && user.getName() != null) {
+            profile.setOfficerName(user.getName());
+            profile = officerRepository.save(profile);
+        }
+
+        return profile;
+    }
+
+    @Transactional(
+            readOnly = true,
+            transactionManager = "postgresTransactionManager"
+    )
+    public OfficerProfile getOfficerByMysqlUserId(java.util.UUID mysqlUserId) {
+        return officerRepository.findByMysqlUserId(mysqlUserId)
                 .orElseThrow(() -> new IllegalStateException(
-                        "Officer profile not found for authenticated user"
+                        "Officer profile not found for user: " + mysqlUserId
                 ));
     }
 }

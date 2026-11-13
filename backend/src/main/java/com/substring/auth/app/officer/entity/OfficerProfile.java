@@ -23,6 +23,9 @@ public class OfficerProfile {
     @Column(name = "mysql_user_id", nullable = false, unique = true)
     private UUID mysqlUserId;
 
+    @Column(name = "officer_name", length = 150)
+    private String officerName;
+
     @Column(nullable = false, length = 50)
     private String designation;
 
@@ -56,11 +59,27 @@ public class OfficerProfile {
         this.mysqlUserId = mysqlUserId;
     }
 
+    public String getOfficerName() {
+        return officerName;
+    }
+
+    public void setOfficerName(String officerName) {
+        this.officerName = officerName;
+    }
+
     public String getDesignation() {
         return designation;
     }
 
     public void setDesignation(String designation) {
         this.designation = designation;
+    }
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public OffsetDateTime getUpdatedAt() {
+        return updatedAt;
     }
 }

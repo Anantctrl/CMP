@@ -7,6 +7,8 @@ public record AssignmentResponse(
         UUID id,
         UUID taskId,
         UUID officerId,
+        String officerName,
+        String officerDesignation,
         String responsibility,
         String instructions,
         String status,

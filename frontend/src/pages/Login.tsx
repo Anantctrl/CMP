@@ -14,7 +14,7 @@ import useAuth from "@/auth/store";
 
 const getErrorMessage = (error: unknown): string => {
   if (typeof error === "object" && error !== null && "response" in error) {
-    const response = error.response;
+    const response = (error as { response?: { data?: { message?: string } } }).response;
 
     if (typeof response === "object" && response !== null && "data" in response) {
       const data = response.data;
@@ -35,7 +35,7 @@ function Login() {
   });
 
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<unknown>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const login = useAuth((state) => state.login);
@@ -59,7 +59,6 @@ function Login() {
   const handleFormSubmit = async (event: FormEvent) => {
     event.preventDefault();
 
-    //validation:
     if (loginData.email.trim() === "") {
       toast.error("Input required !");
       return;
@@ -69,27 +68,15 @@ function Login() {
       return;
     }
 
-    //server call for login
-    // console.log(event.target);
-    // console.log(loginData);
-
     try {
       setLoading(true);
-      // const userInfo = await loginUser(loginData);
-
-      //login function : useAuth
+      setError(null);
       await login(loginData);
       toast.success("Login success");
-      // console.log(userInfo);
       navigate("/dashboard");
-
-      //save the current user logged in informations
-      //localstorage
-    } catch (error: unknown) {
-      console.log(error);
-
+    } catch (err: unknown) {
       toast.error("Error !!");
-      setError(error);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -130,7 +117,7 @@ function Login() {
                 <Alert variant={"destructive"}>
                   <CheckCircle2Icon />
                   <AlertTitle>
-                    {getErrorMessage(error)}
+                    {error}
                   </AlertTitle>
                 </Alert>
               </div>

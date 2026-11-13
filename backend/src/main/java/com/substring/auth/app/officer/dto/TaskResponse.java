@@ -1,9 +1,11 @@
 package com.substring.auth.app.officer.dto;
 
+import java.util.List;
 import java.util.UUID;
 
 public record TaskResponse(
         UUID id,
+        UUID teamId,
         String title,
         String actionType,
         String description,
@@ -11,5 +13,6 @@ public record TaskResponse(
         Double latitude,
         Double longitude,
         UUID createdBy,
-        String status
+        String status,
+        List<String> assignedOfficerNames
 ) {}

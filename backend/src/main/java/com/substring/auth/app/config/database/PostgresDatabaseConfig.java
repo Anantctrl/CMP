@@ -17,7 +17,12 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 @EnableJpaRepositories(
-    basePackages = "com.substring.auth.app.officer.repository",
+    basePackages = {
+        "com.substring.auth.app.officer.repository",
+        "com.substring.auth.app.operations.common.repository",
+        "com.substring.auth.app.team.repository",
+        "com.substring.auth.app.tracking.repository"
+    },
     entityManagerFactoryRef = "postgresEntityManagerFactory",
     transactionManagerRef = "postgresTransactionManager"
 )
@@ -35,7 +40,12 @@ public class PostgresDatabaseConfig {
 
         return builder
                 .dataSource(postgresDataSource())
-                .packages("com.substring.auth.app.officer.entity")
+                .packages(
+                        "com.substring.auth.app.officer.entity",
+                        "com.substring.auth.app.operations.common.entity",
+                        "com.substring.auth.app.team.entity",
+                        "com.substring.auth.app.tracking.entity"
+                )
                 .persistenceUnit("postgres")
                 .properties(Map.of(
                         "hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect"
