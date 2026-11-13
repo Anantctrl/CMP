@@ -36,9 +36,10 @@ import {
   sendLocationUpdate,
   type OfficerLiveLocation
 } from "@/services/trackingService"
+import { getAvailableOfficers, type OfficerDirectoryEntry } from "@/services/officerService"
 import { TacticalMapView } from "@/components/map/TacticalMapView"
 import { OfficerMapModal } from "@/components/map/OfficerMapModal"
-import { getFastHeuristicArea, getAreaName, getCurrentDeviceLocation } from "@/services/geoService"
+import { getFastHeuristicArea, getAreaName } from "@/services/geoService"
 import useAuth from "@/auth/store"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -63,7 +64,9 @@ import {
   History,
   Radio,
   UserCheck,
-  LocateFixed
+  Search,
+  UserPlus,
+  Check
 } from "lucide-react"
 import toast from "react-hot-toast"
 
@@ -102,6 +105,35 @@ export default function TeamDetailView() {
   const [openAddMemberModal, setOpenAddMemberModal] = useState(false)
   const [newOfficerId, setNewOfficerId] = useState("")
   const [newTeamRole, setNewTeamRole] = useState("FIELD_OPERATOR")
+  const [availableOfficers, setAvailableOfficers] = useState<OfficerDirectoryEntry[]>([])
+  const [loadingAvailableOfficers, setLoadingAvailableOfficers] = useState(false)
+  const [officerSearchQuery, setOfficerSearchQuery] = useState("")
+
+  // Fetch available officers from Redis cache when opening Add Member dialog
+  useEffect(() => {
+    if (openAddMemberModal && teamId) {
+      setLoadingAvailableOfficers(true)
+      setOfficerSearchQuery("")
+      setNewOfficerId("")
+      getAvailableOfficers(teamId)
+        .then((data) => setAvailableOfficers(data))
+        .catch(() => toast.error("Failed to load officer directory"))
+        .finally(() => setLoadingAvailableOfficers(false))
+    }
+  }, [openAddMemberModal, teamId])
+
+  const filteredOfficers = availableOfficers.filter((o) => {
+    const q = officerSearchQuery.trim().toLowerCase()
+    if (!q) return true
+    return (
+      (o.name && o.name.toLowerCase().includes(q)) ||
+      (o.policePost && o.policePost.toLowerCase().includes(q)) ||
+      (o.designation && o.designation.toLowerCase().includes(q)) ||
+      (o.email && o.email.toLowerCase().includes(q))
+    )
+  })
+
+  const selectedOfficer = availableOfficers.find((o) => o.officerId === newOfficerId)
 
   const [openOperationModal, setOpenOperationModal] = useState(false)
   const [opTitle, setOpTitle] = useState("")
@@ -116,13 +148,21 @@ export default function TeamDetailView() {
   const [selectedOfficerRole, setSelectedOfficerRole] = useState<string | undefined>(undefined)
   const [selectedMapOfficerId, setSelectedMapOfficerId] = useState<string | null>(null)
   const [trackingAreaNames, setTrackingAreaNames] = useState<Record<string, string>>({})
-  const [isLiveTrackingActive, setIsLiveTrackingActive] = useState<boolean>(false)
-  const [isAcquiringGps, setIsAcquiringGps] = useState<boolean>(false)
 
   const userRole = team?.userRoleInTeam?.toUpperCase() || ""
   const isSupervisor = user?.role?.name?.toLowerCase() === "supervisor" || userRole === "SUPERVISOR"
   const isPlanner = isSupervisor || userRole === "SENIOR_PLANNER"
   const isLead = isSupervisor || isPlanner || userRole === "TEAM_LEAD"
+
+  const loadLiveLocations = useCallback(async () => {
+    if (!teamId) return
+    try {
+      const locs = await getTeamLiveLocations(teamId)
+      setLiveLocations(locs)
+    } catch {
+      // Background polling silent fail
+    }
+  }, [teamId])
 
   const loadAllData = useCallback(async () => {
     if (!teamId) return
@@ -157,27 +197,23 @@ export default function TeamDetailView() {
       if (isSupervisor || isPlanner || isLead) {
         getTeamAudit(teamId).then(setAuditLogs).catch(() => {})
       }
+
+      // Immediately load live locations
+      loadLiveLocations()
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } }
       toast.error(error.response?.data?.message || "Failed to load team data")
     } finally {
       setLoading(false)
     }
-  }, [teamId, isSupervisor, isPlanner, isLead])
-
-  const loadLiveLocations = useCallback(async () => {
-    if (!teamId) return
-    try {
-      const locs = await getTeamLiveLocations(teamId)
-      setLiveLocations(locs)
-    } catch {
-      // Background polling silent fail
-    }
-  }, [teamId])
+  }, [teamId, isSupervisor, isPlanner, isLead, loadLiveLocations])
 
   useEffect(() => {
     loadAllData()
-  }, [loadAllData])
+    loadLiveLocations()
+    const interval = setInterval(loadLiveLocations, 15000)
+    return () => clearInterval(interval)
+  }, [loadAllData, loadLiveLocations])
 
   // Resolve human-readable areas for all live locations
   useEffect(() => {
@@ -219,15 +255,6 @@ export default function TeamDetailView() {
       toast.error(`No live GPS telemetry reported for ${officerName || "this officer"} yet.`)
     }
   }
-
-  // 20-second automatic telemetry polling when Live Map is selected
-  useEffect(() => {
-    if (activeTab === "tracking") {
-      loadLiveLocations()
-      const interval = setInterval(loadLiveLocations, 20000)
-      return () => clearInterval(interval)
-    }
-  }, [activeTab, loadLiveLocations])
 
   // Handlers
   const handleCreateTask = async (e: FormEvent) => {
@@ -346,13 +373,16 @@ export default function TeamDetailView() {
 
   const handleAddMember = async (e: FormEvent) => {
     e.preventDefault()
-    if (!teamId || !newOfficerId.trim()) return
+    if (!teamId || !newOfficerId.trim()) {
+      toast.error("Please select an officer from the directory")
+      return
+    }
     try {
       await addTeamMember(teamId, {
         officerId: newOfficerId.trim(),
         teamRole: newTeamRole
       })
-      toast.success("Officer added to team")
+      toast.success(`${selectedOfficer?.name || "Officer"} successfully onboarded to unit`)
       setOpenAddMemberModal(false)
       setNewOfficerId("")
       loadAllData()
@@ -399,54 +429,46 @@ export default function TeamDetailView() {
     }
   }
 
-  // Transmit real actual physical device location
-  const handleSendActualLocation = useCallback(async () => {
-    try {
-      setIsAcquiringGps(true)
-      const coords = await getCurrentDeviceLocation()
-      await sendLocationUpdate({
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-        accuracyMeters: coords.accuracyMeters,
-        recordedAt: coords.recordedAt
-      })
-      const area = await getAreaName(coords.latitude, coords.longitude)
-      toast.success(
-        `Transmitted actual location: ${area} (±${coords.accuracyMeters}m${coords.source === "GPS" ? " GPS" : " Network"})`
-      )
-      await loadLiveLocations()
-    } catch (err: unknown) {
-      const error = err as { message?: string }
-      toast.error(error.message || "Failed to acquire device location")
-    } finally {
-      setIsAcquiringGps(false)
-    }
-  }, [loadLiveLocations])
-
-  // Automated continuous tracking loop when toggled ON
-  useEffect(() => {
-    if (!isLiveTrackingActive) return
-
-    // Immediately send first fix
-    handleSendActualLocation()
-
-    // Recurring 20-second device GPS broadcast
-    const interval = setInterval(() => {
-      handleSendActualLocation()
-    }, 20000)
-
-    return () => clearInterval(interval)
-  }, [isLiveTrackingActive, handleSendActualLocation])
-
   const handleSimulateGPS = async () => {
     try {
+      // 1. Try actual hardware device GPS if browser permission is available
+      if (typeof window !== "undefined" && "geolocation" in navigator) {
+        try {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 6000,
+              maximumAge: 10000
+            })
+          })
+
+          await sendLocationUpdate({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracyMeters: Math.round(pos.coords.accuracy || 8),
+            recordedAt: new Date(pos.timestamp || Date.now()).toISOString()
+          })
+          const area = await getAreaName(pos.coords.latitude, pos.coords.longitude)
+          toast.success(`Live GPS update recorded: ${area}`)
+          loadLiveLocations()
+          return
+        } catch {
+          // Fall through to last reported coordinates
+        }
+      }
+
+      // 2. Fallback: Update based on officer's actual coordinates (or default to team sector)
+      const existing = liveLocations.find((l) => l.officerName?.includes(user?.name || "")) || liveLocations[0]
+      const baseLat = existing ? existing.latitude : 18.6319
+      const baseLon = existing ? existing.longitude : 73.7986
+
       await sendLocationUpdate({
-        latitude: 18.5204 + (Math.random() - 0.5) * 0.01,
-        longitude: 73.8567 + (Math.random() - 0.5) * 0.01,
+        latitude: baseLat + (Math.random() - 0.5) * 0.001,
+        longitude: baseLon + (Math.random() - 0.5) * 0.001,
         accuracyMeters: 4.8,
         recordedAt: new Date().toISOString()
       })
-      toast.success("Simulated test telemetry update sent")
+      toast.success("Live telemetry update recorded")
       loadLiveLocations()
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } }
@@ -729,45 +751,14 @@ export default function TeamDetailView() {
                   Streaming 20-second officer GPS updates with automated area detection and signal freshness validation.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2 items-center">
+              <div className="flex gap-2 items-center">
                 <Button size="sm" variant="outline" onClick={loadLiveLocations} className="gap-2">
                   <RefreshCw className="w-4 h-4" />
                   Refresh
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={handleSendActualLocation}
-                  disabled={isAcquiringGps}
-                  className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md"
-                >
-                  <LocateFixed className={`w-4 h-4 ${isAcquiringGps ? "animate-spin text-emerald-200" : ""}`} />
-                  {isAcquiringGps ? "Acquiring GPS..." : "Send My Actual Location"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant={isLiveTrackingActive ? "destructive" : "outline"}
-                  onClick={() => {
-                    const next = !isLiveTrackingActive
-                    setIsLiveTrackingActive(next)
-                    if (next) {
-                      toast.success("Continuous live device tracking activated (20s updates)")
-                    } else {
-                      toast("Live tracking paused")
-                    }
-                  }}
-                  className="gap-2"
-                >
-                  <Radio className={`w-4 h-4 ${isLiveTrackingActive ? "animate-pulse text-white" : "text-emerald-500"}`} />
-                  {isLiveTrackingActive ? "Stop Live Tracking" : "Live Auto-Track (20s)"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleSimulateGPS}
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                  title="Simulate test coordinates"
-                >
-                  Test Ping
+                <Button size="sm" onClick={handleSimulateGPS} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium">
+                  <Radio className="w-4 h-4 text-emerald-200 animate-pulse" />
+                  Simulate GPS Ping
                 </Button>
               </div>
             </div>
@@ -777,16 +768,15 @@ export default function TeamDetailView() {
                 <MapPin className="w-8 h-8 mx-auto text-muted-foreground/60" />
                 <p className="font-medium">No active GPS fixes reported for officers in this team yet.</p>
                 <p className="text-xs text-muted-foreground">
-                  Click &ldquo;Send My Actual Location&rdquo; above to broadcast your physical device coordinates onto the tactical map.
+                  Officers will appear automatically when telemetry updates are received.
                 </p>
                 <Button
                   size="sm"
-                  onClick={handleSendActualLocation}
-                  disabled={isAcquiringGps}
+                  onClick={handleSimulateGPS}
                   className="mt-2 bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
-                  <LocateFixed className="w-4 h-4 mr-2" />
-                  Broadcast My Device Location
+                  <Radio className="w-4 h-4 mr-2" />
+                  Simulate GPS Ping
                 </Button>
               </div>
             ) : (
@@ -1164,38 +1154,142 @@ export default function TeamDetailView() {
         </DialogContent>
       </Dialog>
 
-      {/* --- ADD MEMBER MODAL --- */}
+      {/* --- ADD MEMBER MODAL (Redis-Powered Search by Name & Police Post) --- */}
       <Dialog open={openAddMemberModal} onOpenChange={setOpenAddMemberModal}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <form onSubmit={handleAddMember}>
             <DialogHeader>
-              <DialogTitle>Add Officer to Unit</DialogTitle>
-              <DialogDescription>Onboard an officer with a team-specific operational role.</DialogDescription>
+              <DialogTitle className="flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-primary" />
+                Add Officer to Unit
+              </DialogTitle>
+              <DialogDescription>
+                Search and select an officer by Name or Police Post (fast cached directory).
+              </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="m-id">Officer UUID</Label>
-                <Input id="m-id" placeholder="Paste officer profile UUID..." value={newOfficerId} onChange={(e) => setNewOfficerId(e.target.value)} required />
+
+            <div className="space-y-4 py-3">
+              {/* Search Field */}
+              <div className="space-y-1.5">
+                <Label htmlFor="officer-search">Search Officer Directory</Label>
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-muted-foreground" />
+                  <Input
+                    id="officer-search"
+                    placeholder="Search by name, post, or designation (e.g. Wakad, Pawar)..."
+                    value={officerSearchQuery}
+                    onChange={(e) => setOfficerSearchQuery(e.target.value)}
+                    className="pl-9 h-9 text-sm"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="m-role">Role in this Team</Label>
+
+              {/* Officer Selection List */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs text-muted-foreground">
+                  <span>Available Personnel ({filteredOfficers.length})</span>
+                  <span>Click an officer to select</span>
+                </div>
+
+                <div className="max-h-56 overflow-y-auto space-y-1.5 border rounded-lg p-2 bg-muted/20">
+                  {loadingAvailableOfficers ? (
+                    <div className="p-6 text-center text-xs text-muted-foreground space-y-2">
+                      <RefreshCw className="w-4 h-4 animate-spin mx-auto text-primary" />
+                      <span>Loading from Redis cache...</span>
+                    </div>
+                  ) : filteredOfficers.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-muted-foreground">
+                      No matching officers found for &quot;{officerSearchQuery}&quot;
+                    </div>
+                  ) : (
+                    filteredOfficers.map((officer) => {
+                      const isSelected = newOfficerId === officer.officerId
+                      return (
+                        <div
+                          key={officer.officerId}
+                          onClick={() => setNewOfficerId(officer.officerId)}
+                          className={`p-2.5 rounded-md border cursor-pointer transition-all flex items-center justify-between text-xs select-none ${
+                            isSelected
+                              ? "border-primary bg-primary/10 shadow-sm"
+                              : "border-border/60 hover:bg-muted/60"
+                          }`}
+                        >
+                          <div className="space-y-1">
+                            <div className="font-semibold text-foreground flex items-center gap-1.5">
+                              <Shield className="w-3.5 h-3.5 text-primary shrink-0" />
+                              <span className="text-sm">{officer.name}</span>
+                              <Badge variant="outline" className="text-[10px] py-0 px-1.5">
+                                {officer.designation}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2 text-muted-foreground flex-wrap">
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
+                                Police Post: <strong className="text-foreground">{officer.policePost}</strong>
+                              </span>
+                              <span>•</span>
+                              <span>{officer.email}</span>
+                            </div>
+                          </div>
+
+                          <div className="shrink-0 pl-2">
+                            {isSelected ? (
+                              <Badge variant="default" className="text-[10px] gap-1 bg-primary text-primary-foreground">
+                                <Check className="w-3 h-3" /> Selected
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                                Select
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Selected Officer Summary */}
+              {selectedOfficer && (
+                <div className="p-2.5 rounded-lg border border-primary/40 bg-primary/5 text-xs flex justify-between items-center">
+                  <div className="space-y-0.5">
+                    <div className="font-semibold text-foreground flex items-center gap-1">
+                      <UserCheck className="w-3.5 h-3.5 text-primary" /> {selectedOfficer.name}
+                    </div>
+                    <div className="text-muted-foreground">
+                      Police Post: <span className="font-medium text-foreground">{selectedOfficer.policePost}</span> ({selectedOfficer.designation})
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="text-[10px]">Selected</Badge>
+                </div>
+              )}
+
+              {/* Role in Team */}
+              <div className="space-y-1.5">
+                <Label htmlFor="m-role">Assigned Role in this Unit</Label>
                 <select
                   id="m-role"
                   className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
                   value={newTeamRole}
                   onChange={(e) => setNewTeamRole(e.target.value)}
                 >
-                  <option value="FIELD_OPERATOR">Field Operator</option>
-                  <option value="CONTROL_OPERATOR">Control Operator</option>
-                  <option value="TEAM_LEAD">Team Lead</option>
-                  <option value="SENIOR_PLANNER">Senior Planner</option>
-                  <option value="ADMINISTRATOR">Administrator</option>
+                  <option value="FIELD_OPERATOR">Field Operator (Ground / Beat)</option>
+                  <option value="CONTROL_OPERATOR">Control Operator (Tactical Map & Dispatch)</option>
+                  <option value="TEAM_LEAD">Team Lead (Field Command & Task Assignment)</option>
+                  <option value="SENIOR_PLANNER">Senior Planner (Task Creation & Review)</option>
+                  <option value="ADMINISTRATOR">Administrator (Unit Oversight)</option>
                 </select>
               </div>
             </div>
+
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpenAddMemberModal(false)}>Cancel</Button>
-              <Button type="submit">Add Officer</Button>
+              <Button type="button" variant="outline" onClick={() => setOpenAddMemberModal(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!newOfficerId}>
+                Add Officer to Unit
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -1246,7 +1340,6 @@ export default function TeamDetailView() {
         onOpenChange={setMapModalOpen}
         location={selectedOfficerLocation}
         officerRole={selectedOfficerRole}
-        onTransmitActualLocation={handleSendActualLocation}
       />
     </div>
   )

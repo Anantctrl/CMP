@@ -21,9 +21,9 @@ public record OfficerLiveLocationResponse(
         OffsetDateTime now = OffsetDateTime.now();
         Duration diff = Duration.between(loc.getRecordedAt(), now).abs();
         String freshness;
-        if (diff.getSeconds() < 60) {
+        if (diff.getSeconds() < 300) {
             freshness = "FRESH";
-        } else if (diff.getSeconds() < 180) {
+        } else if (diff.getSeconds() < 900) {
             freshness = "DEGRADED";
         } else {
             freshness = "STALE";

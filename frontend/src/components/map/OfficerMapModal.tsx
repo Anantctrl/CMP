@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import type { OfficerLiveLocation } from "@/services/trackingService"
 import { getAreaName, getFastHeuristicArea } from "@/services/geoService"
-import { MapPin, Navigation, ExternalLink, Copy, Check, Radio, Shield, LocateFixed } from "lucide-react"
+import { MapPin, Navigation, ExternalLink, Copy, Check, Radio, Shield } from "lucide-react"
 import toast from "react-hot-toast"
 
 interface OfficerMapModalProps {
@@ -21,15 +21,13 @@ interface OfficerMapModalProps {
   onOpenChange: (open: boolean) => void
   location: OfficerLiveLocation | null
   officerRole?: string
-  onTransmitActualLocation?: () => Promise<void>
 }
 
 export const OfficerMapModal: React.FC<OfficerMapModalProps> = ({
   open,
   onOpenChange,
   location,
-  officerRole,
-  onTransmitActualLocation
+  officerRole
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
@@ -38,7 +36,6 @@ export const OfficerMapModal: React.FC<OfficerMapModalProps> = ({
 
   const [areaName, setAreaName] = useState<string>("")
   const [copied, setCopied] = useState<boolean>(false)
-  const [updatingActual, setUpdatingActual] = useState<boolean>(false)
 
   // Resolve human-readable area name whenever location changes
   useEffect(() => {
@@ -263,25 +260,7 @@ export const OfficerMapModal: React.FC<OfficerMapModalProps> = ({
           <div className="text-xs text-muted-foreground font-medium hidden sm:block">
             Target UUID: {location.officerId.substring(0, 16)}...
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
-            {onTransmitActualLocation && (
-              <Button
-                size="sm"
-                onClick={async () => {
-                  try {
-                    setUpdatingActual(true)
-                    await onTransmitActualLocation()
-                  } finally {
-                    setUpdatingActual(false)
-                  }
-                }}
-                disabled={updatingActual}
-                className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-              >
-                <LocateFixed className={`w-3.5 h-3.5 ${updatingActual ? "animate-spin" : ""}`} />
-                {updatingActual ? "Pinging..." : "Send My Actual GPS"}
-              </Button>
-            )}
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             <Button size="sm" variant="outline" onClick={handleCopyCoords} className="gap-1.5 text-xs">
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
               {copied ? "Copied" : "Copy GPS"}

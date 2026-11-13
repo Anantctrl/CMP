@@ -1,4 +1,3 @@
-
 package com.substring.auth.app.auth.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -61,8 +60,8 @@ public class SecurityConfig {
                         // Public URLs: Registration, Login, etc.
                         .requestMatchers(AppConstants.AUTH_PUBLIC_URLS).permitAll()
 
-                        // Restricted URLs
-                        .requestMatchers(AppConstants.AUTH_RESTRICTED_URLS).denyAll()
+                        // Restricted URLs - Accessible by Supervisors and Administrators
+                        .requestMatchers(AppConstants.AUTH_RESTRICTED_URLS).hasAnyAuthority("Supervisor", "Administrator")
 
                         // All other URLs require authentication
                         .anyRequest().authenticated()

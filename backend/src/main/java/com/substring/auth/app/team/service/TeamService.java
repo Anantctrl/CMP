@@ -85,7 +85,7 @@ public class TeamService {
             return teamRepository.findAll().stream()
                     .map(team -> {
                         long members = membershipRepository.countByTeam_Id(team.getId());
-                        long ops = operationTeamRepository.findAllByTeam_Id(team.getId()).size();
+                        long ops = operationTeamRepository.countByTeam_Id(team.getId());
                         return TeamResponse.from(team, members, "SUPERVISOR", ops);
                     })
                     .toList();
@@ -97,7 +97,7 @@ public class TeamService {
                 .map(membership -> {
                     Team team = membership.getTeam();
                     long members = membershipRepository.countByTeam_Id(team.getId());
-                    long ops = operationTeamRepository.findAllByTeam_Id(team.getId()).size();
+                    long ops = operationTeamRepository.countByTeam_Id(team.getId());
                     return TeamResponse.from(team, members, membership.getTeamRole().name(), ops);
                 })
                 .toList();
@@ -125,7 +125,7 @@ public class TeamService {
         }
 
         long members = membershipRepository.countByTeam_Id(team.getId());
-        long ops = operationTeamRepository.findAllByTeam_Id(team.getId()).size();
+        long ops = operationTeamRepository.countByTeam_Id(team.getId());
 
         return TeamResponse.from(team, members, roleStr, ops);
     }

@@ -66,7 +66,17 @@ export async function assignOfficer(taskId: string, data: {
 }
 
 export async function getMyAssignments(): Promise<TaskAssignment[]> {
-  const res = await apiClient.get<TaskAssignment[]>("/assignments/my")
+  const res = await apiClient.get<TaskAssignment[]>("/assignments/my-assignments")
+  return res.data
+}
+
+export async function reassignOfficer(assignmentId: string, data: {
+  officerId: string
+  responsibility: string
+  instructions?: string
+  reason: string
+}): Promise<TaskAssignment> {
+  const res = await apiClient.post<TaskAssignment>(`/assignments/${assignmentId}/reassign`, data)
   return res.data
 }
 
@@ -85,6 +95,13 @@ export async function submitAssignment(assignmentId: string, completionReport: s
 export async function approveAssignment(assignmentId: string, remarks?: string): Promise<TaskAssignment> {
   const res = await apiClient.post<TaskAssignment>(`/assignments/${assignmentId}/approve`, {
     remarks: remarks || "Approved"
+  })
+  return res.data
+}
+
+export async function requestCorrection(assignmentId: string, remarks?: string): Promise<TaskAssignment> {
+  const res = await apiClient.post<TaskAssignment>(`/assignments/${assignmentId}/request-correction`, {
+    remarks: remarks || "Correction requested"
   })
   return res.data
 }

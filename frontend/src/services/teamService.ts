@@ -57,9 +57,9 @@ export async function addTeamMember(teamId: string, data: { officerId: string; t
   return res.data
 }
 
-export async function removeTeamMember(teamId: string, officerId: string, remarks: string): Promise<void> {
+export async function removeTeamMember(teamId: string, officerId: string, remarks?: string): Promise<void> {
   await apiClient.delete(`/teams/${teamId}/members/${officerId}`, {
-    data: { remarks }
+    params: remarks ? { remarks } : {}
   })
 }
 

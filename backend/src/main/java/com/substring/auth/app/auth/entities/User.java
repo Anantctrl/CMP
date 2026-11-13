@@ -9,7 +9,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.time.Instant;
 import java.util.*;
 
-
 @Getter
 @Setter
 @AllArgsConstructor
@@ -22,30 +21,41 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "user_id")
     private UUID id;
+
     @Column(name = "user_email", unique = true, length = 300)
     private String email;
+
     @Column(name = "police_post", nullable = false, length = 100)
     private String policePost;
+
     @Column(name = "user_name", length = 500)
     private String name;
+
     private String password;
+
     private String image;
+
     @Column(name = "enabled", nullable = false)
+    @Builder.Default
     private boolean enable = true;
+
+    @Builder.Default
     private Instant createdAt = Instant.now();
+
+    @Builder.Default
     private Instant updatedAt = Instant.now();
 
-
-
-
     @Enumerated(EnumType.STRING)
+    @Builder.Default
     private Provider provider = Provider.LOCAL;
-    private  String providerId;
+
+    private String providerId;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
-        @PrePersist
+
+    @PrePersist
     protected void onCreate() {
         Instant now = Instant.now();
         if (createdAt == null) createdAt = now;
@@ -57,14 +67,13 @@ public class User implements UserDetails {
         updatedAt = Instant.now();
     }
 
-  @Override
+    @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-    if (role == null) {
-        return List.of();
+        if (role == null) {
+            return List.of();
+        }
+        return List.of(new SimpleGrantedAuthority(role.getName()));
     }
-
-    return List.of(new SimpleGrantedAuthority(role.getName()));
-}
 
     @Override
     public String getUsername() {

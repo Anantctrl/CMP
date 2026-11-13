@@ -13,14 +13,21 @@ import com.substring.auth.app.tracking.dto.OfficerLiveLocationResponse;
 import com.substring.auth.app.tracking.entity.OfficerLocationUpdate;
 import com.substring.auth.app.tracking.repository.OfficerLocationUpdateRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.*;
 
 @Service
 public class LocationTrackingService {
+
+    private static final Logger log = LoggerFactory.getLogger(LocationTrackingService.class);
+    private static final String LIVE_LOCATION_REDIS_KEY_PREFIX = "officer:live:";
 
     private final OfficerLocationUpdateRepository locationRepository;
     private final CurrentOfficerService currentOfficerService;
@@ -28,6 +35,7 @@ public class LocationTrackingService {
     private final TeamRepository teamRepository;
     private final TeamAuthorizationService authService;
     private final OfficerProfileRepository officerRepository;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     public LocationTrackingService(
             OfficerLocationUpdateRepository locationRepository,
@@ -35,7 +43,8 @@ public class LocationTrackingService {
             TeamMembershipRepository membershipRepository,
             TeamRepository teamRepository,
             TeamAuthorizationService authService,
-            OfficerProfileRepository officerRepository
+            OfficerProfileRepository officerRepository,
+            RedisTemplate<String, Object> redisTemplate
     ) {
         this.locationRepository = locationRepository;
         this.currentOfficerService = currentOfficerService;
@@ -43,6 +52,7 @@ public class LocationTrackingService {
         this.teamRepository = teamRepository;
         this.authService = authService;
         this.officerRepository = officerRepository;
+        this.redisTemplate = redisTemplate;
     }
 
     @Transactional(transactionManager = "postgresTransactionManager")
@@ -75,7 +85,19 @@ public class LocationTrackingService {
         update.setReceivedAt(OffsetDateTime.now());
 
         OfficerLocationUpdate saved = locationRepository.save(update);
-        return OfficerLiveLocationResponse.from(saved);
+        OfficerLiveLocationResponse response = OfficerLiveLocationResponse.from(saved);
+
+        try {
+            redisTemplate.opsForValue().set(
+                    LIVE_LOCATION_REDIS_KEY_PREFIX + currentOfficer.getId(),
+                    response,
+                    Duration.ofHours(24)
+            );
+        } catch (Exception e) {
+            log.warn("Failed to cache live location in Redis: {}", e.getMessage());
+        }
+
+        return response;
     }
 
     @Transactional(
@@ -95,11 +117,45 @@ public class LocationTrackingService {
         );
 
         List<TeamMembership> members = membershipRepository.findAllByTeam_Id(teamId);
-        List<OfficerLiveLocationResponse> results = new ArrayList<>();
+        if (members.isEmpty()) {
+            return Collections.emptyList();
+        }
 
-        for (TeamMembership member : members) {
-            locationRepository.findFirstByOfficer_IdOrderByRecordedAtDesc(member.getOfficer().getId())
-                    .ifPresent(loc -> results.add(OfficerLiveLocationResponse.from(loc)));
+        List<UUID> memberOfficerIds = members.stream()
+                .map(m -> m.getOfficer().getId())
+                .toList();
+
+        List<OfficerLiveLocationResponse> results = new ArrayList<>();
+        List<UUID> missingFromCache = new ArrayList<>();
+
+        for (UUID officerId : memberOfficerIds) {
+            try {
+                Object cached = redisTemplate.opsForValue().get(LIVE_LOCATION_REDIS_KEY_PREFIX + officerId);
+                if (cached instanceof OfficerLiveLocationResponse loc) {
+                    results.add(loc);
+                } else {
+                    missingFromCache.add(officerId);
+                }
+            } catch (Exception e) {
+                missingFromCache.add(officerId);
+            }
+        }
+
+        // Batch fetch all missing officers in a single query (N+1 elimination)
+        if (!missingFromCache.isEmpty()) {
+            List<OfficerLocationUpdate> dbUpdates = locationRepository.findLatestLocationsForOfficers(missingFromCache);
+            for (OfficerLocationUpdate update : dbUpdates) {
+                OfficerLiveLocationResponse resp = OfficerLiveLocationResponse.from(update);
+                results.add(resp);
+                try {
+                    redisTemplate.opsForValue().set(
+                            LIVE_LOCATION_REDIS_KEY_PREFIX + update.getOfficer().getId(),
+                            resp,
+                            Duration.ofHours(24)
+                    );
+                } catch (Exception ignored) {
+                }
+            }
         }
 
         return results;
@@ -117,8 +173,7 @@ public class LocationTrackingService {
 
         // If requesting own location or supervisor
         if (targetOfficer.getId().equals(currentOfficer.getId()) || authService.isSupervisor()) {
-            return locationRepository.findFirstByOfficer_IdOrderByRecordedAtDesc(officerId)
-                    .map(OfficerLiveLocationResponse::from);
+            return fetchLatestFromCacheOrDb(officerId);
         }
 
         // Otherwise verify caller shares a team where caller has monitoring role
@@ -138,7 +193,31 @@ public class LocationTrackingService {
             );
         }
 
+        return fetchLatestFromCacheOrDb(officerId);
+    }
+
+    private Optional<OfficerLiveLocationResponse> fetchLatestFromCacheOrDb(UUID officerId) {
+        try {
+            Object cached = redisTemplate.opsForValue().get(LIVE_LOCATION_REDIS_KEY_PREFIX + officerId);
+            if (cached instanceof OfficerLiveLocationResponse loc) {
+                return Optional.of(loc);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to read officer live location from Redis: {}", e.getMessage());
+        }
+
         return locationRepository.findFirstByOfficer_IdOrderByRecordedAtDesc(officerId)
-                .map(OfficerLiveLocationResponse::from);
+                .map(loc -> {
+                    OfficerLiveLocationResponse resp = OfficerLiveLocationResponse.from(loc);
+                    try {
+                        redisTemplate.opsForValue().set(
+                                LIVE_LOCATION_REDIS_KEY_PREFIX + officerId,
+                                resp,
+                                Duration.ofHours(24)
+                        );
+                    } catch (Exception ignored) {
+                    }
+                    return resp;
+                });
     }
 }

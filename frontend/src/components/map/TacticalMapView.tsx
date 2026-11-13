@@ -40,13 +40,12 @@ export const TacticalMapView: React.FC<TacticalMapViewProps> = ({
 
     // Prevent duplicate map initialization
     if (!mapInstanceRef.current) {
-      // Default center: Pune or Delhi or first location
-      const initialLat = locations[0]?.latitude || 18.5204
-      const initialLon = locations[0]?.longitude || 73.8567
+      const initialLat = locations[0]?.latitude || 18.6319
+      const initialLon = locations[0]?.longitude || 73.7986
 
       const map = L.map(mapContainerRef.current, {
         center: [initialLat, initialLon],
-        zoom: 14,
+        zoom: 15,
         zoomControl: true,
         attributionControl: true
       })
@@ -58,6 +57,10 @@ export const TacticalMapView: React.FC<TacticalMapViewProps> = ({
       }).addTo(map)
 
       mapInstanceRef.current = map
+
+      setTimeout(() => {
+        map.invalidateSize()
+      }, 100)
     }
 
     return () => {
@@ -67,6 +70,16 @@ export const TacticalMapView: React.FC<TacticalMapViewProps> = ({
       }
     }
   }, [])
+
+  // Invalidate size on locations update or tab change
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize()
+      }
+    }, 200)
+    return () => clearTimeout(timer)
+  }, [locations])
 
   // Create custom police tactical HTML marker
   const createOfficerMarker = (loc: OfficerLiveLocation) => {

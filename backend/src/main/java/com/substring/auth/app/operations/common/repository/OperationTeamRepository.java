@@ -13,6 +13,8 @@ public interface OperationTeamRepository extends JpaRepository<OperationTeam, UU
 
     List<OperationTeam> findAllByTeam_Id(UUID teamId);
 
+    long countByTeam_Id(UUID teamId);
+
     Optional<OperationTeam> findByOperation_IdAndTeam_Id(UUID operationId, UUID teamId);
 
     boolean existsByOperation_IdAndTeam_Id(UUID operationId, UUID teamId);

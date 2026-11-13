@@ -1,13 +1,5 @@
 // Service to resolve GPS coordinates into human-readable tactical areas and localities
 
-export interface DeviceCoordinates {
-  latitude: number
-  longitude: number
-  accuracyMeters: number
-  recordedAt: string
-  source: "GPS" | "NETWORK"
-}
-
 const areaCache = new Map<string, string>()
 
 // Pre-load from localStorage if available
@@ -28,58 +20,6 @@ function saveCache() {
   } catch {
     // Ignore cache persistence errors
   }
-}
-
-/**
- * Obtains the user's ACTUAL physical location.
- * Uses high-accuracy device GPS (navigator.geolocation).
- * If browser GPS is denied or unavailable, seamlessly falls back to IP network geolocation.
- */
-export async function getCurrentDeviceLocation(): Promise<DeviceCoordinates> {
-  // 1. Try Browser Hardware / Sensor GPS
-  if (typeof window !== "undefined" && "geolocation" in navigator) {
-    try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 5000
-        })
-      })
-
-      return {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        accuracyMeters: Math.round(position.coords.accuracy || 8),
-        recordedAt: new Date(position.timestamp || Date.now()).toISOString(),
-        source: "GPS"
-      }
-    } catch (gpsError: unknown) {
-      const err = gpsError as GeolocationPositionError
-      console.warn("Browser GPS not available or denied, trying network IP fallback:", err.message)
-    }
-  }
-
-  // 2. Fallback to real IP-based geolocation if browser GPS is blocked/unsupported
-  try {
-    const res = await fetch("https://ipapi.co/json/", { cache: "no-store" })
-    if (res.ok) {
-      const data = await res.json()
-      if (data.latitude && data.longitude) {
-        return {
-          latitude: Number(data.latitude),
-          longitude: Number(data.longitude),
-          accuracyMeters: 500, // IP range estimation
-          recordedAt: new Date().toISOString(),
-          source: "NETWORK"
-        }
-      }
-    }
-  } catch (netErr) {
-    console.warn("Network IP geolocation failed:", netErr)
-  }
-
-  throw new Error("Unable to obtain your actual location. Please allow browser location access.")
 }
 
 /**
