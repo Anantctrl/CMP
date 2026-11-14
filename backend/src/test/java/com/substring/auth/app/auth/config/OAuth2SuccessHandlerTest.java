@@ -22,7 +22,6 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -77,69 +76,41 @@ class OAuth2SuccessHandlerTest {
         defaultRole.setId(UUID.randomUUID());
         defaultRole.setName(AppConstants.DEFAULT_ROLE);
 
-        lenient().when(authentication.getAuthorizedClientRegistrationId()).thenReturn("google");
         lenient().when(authentication.getPrincipal()).thenReturn(oAuth2User);
         lenient().when(roleRepository.findByName(any())).thenReturn(Optional.of(defaultRole));
         lenient().when(jwtService.getRefreshTtlSeconds()).thenReturn(86400L);
     }
 
     @Test
-    @DisplayName("Security: Reject Google login when email_verified claim is false (Prevents Account Takeover)")
-    void shouldRejectGoogleLoginWhenEmailNotVerified() throws Exception {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put("sub", "google-attacker-sub-123");
-        attributes.put("email", "victim.commander@police.gov");
-        attributes.put("name", "Attacker Impersonator");
-        attributes.put("email_verified", false); // Unverified email claim
-
-        when(oAuth2User.getAttributes()).thenReturn(attributes);
+    @DisplayName("Google Auth Removed: Reject Google login as unsupported registration provider")
+    void shouldRejectGoogleLoginAsUnsupported() throws Exception {
+        when(authentication.getAuthorizedClientRegistrationId()).thenReturn("google");
 
         oAuth2SuccessHandler.onAuthenticationSuccess(request, response, authentication);
 
-        // Verify authentication was aborted and redirected to failure URL
         ArgumentCaptor<String> redirectCaptor = ArgumentCaptor.forClass(String.class);
         verify(response).sendRedirect(redirectCaptor.capture());
         assertThat(redirectCaptor.getValue()).contains("http://localhost:5173/login?error=oauth_failed");
-        assertThat(redirectCaptor.getValue()).contains("email+is+not+verified");
+        assertThat(redirectCaptor.getValue()).contains("Unsupported+OAuth2+registration+provider%3A+google");
 
-        // Verify NO tokens or cookies were generated
         verify(jwtService, never()).generateRefreshToken(any(), any());
         verify(cookieService, never()).attachRefreshCookie(any(), any(), anyInt());
-        verify(refreshTokenRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Security: Reject Google login when email_verified claim is missing/null")
-    void shouldRejectGoogleLoginWhenEmailVerifiedClaimMissing() throws Exception {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put("sub", "google-attacker-sub-999");
-        attributes.put("email", "victim.officer@police.gov");
-        attributes.put("name", "Unknown Account");
-        // email_verified is not present in attributes
+    @DisplayName("GitHub Auth: Authenticate existing user matching stable GitHub ID")
+    void shouldAuthenticateUserByStableGithubProviderId() throws Exception {
+        when(authentication.getAuthorizedClientRegistrationId()).thenReturn("github");
 
-        when(oAuth2User.getAttributes()).thenReturn(attributes);
-
-        oAuth2SuccessHandler.onAuthenticationSuccess(request, response, authentication);
-
-        ArgumentCaptor<String> redirectCaptor = ArgumentCaptor.forClass(String.class);
-        verify(response).sendRedirect(redirectCaptor.capture());
-        assertThat(redirectCaptor.getValue()).contains("email+is+not+verified");
-
-        verify(jwtService, never()).generateRefreshToken(any(), any());
-    }
-
-    @Test
-    @DisplayName("Stable ID: Authenticate existing Google user matching Provider.GOOGLE + providerId")
-    void shouldAuthenticateUserByStableGoogleProviderId() throws Exception {
-        String googleSub = "1098234723498234";
-        String email = "verified.officer@police.gov";
+        String githubId = "github-stable-id-12345";
+        String email = "inspector@police.gov";
 
         Map<String, Object> attributes = new HashMap<>();
-        attributes.put("sub", googleSub);
-        attributes.put("email", email);
+        attributes.put("id", githubId);
+        attributes.put("login", "inspector_sharma");
         attributes.put("name", "Inspector Sharma");
-        attributes.put("picture", "http://image.url/avatar.jpg");
-        attributes.put("email_verified", true);
+        attributes.put("avatar_url", "http://avatars.github.com/u/12345");
+        attributes.put("email", email);
 
         when(oAuth2User.getAttributes()).thenReturn(attributes);
 
@@ -147,179 +118,99 @@ class OAuth2SuccessHandlerTest {
                 .id(UUID.randomUUID())
                 .email(email)
                 .name("Inspector Sharma")
-                .provider(Provider.GOOGLE)
-                .providerId(googleSub)
-                .enable(true)
-                .role(defaultRole)
-                .policePost("Central Police Post")
-                .build();
-
-        when(userRepository.findByProviderAndProviderId(Provider.GOOGLE, googleSub)).thenReturn(Optional.of(existingUser));
-        when(userRepository.save(any(User.class))).thenReturn(existingUser);
-        when(jwtService.generateRefreshToken(any(), any())).thenReturn("mock-refresh-token");
-
-        oAuth2SuccessHandler.onAuthenticationSuccess(request, response, authentication);
-
-        verify(userRepository).findByProviderAndProviderId(Provider.GOOGLE, googleSub);
-        verify(cookieService).attachRefreshCookie(eq(response), eq("mock-refresh-token"), eq(86400));
-        verify(response).sendRedirect("http://localhost:5173/oauth/success");
-    }
-
-    @Test
-    @DisplayName("Security: Reject Google login when email matches existing Google account with a DIFFERENT sub")
-    void shouldRejectGoogleLoginWhenSubMismatchesExistingGoogleAccount() throws Exception {
-        String originalGoogleSub = "google-sub-original-111";
-        String attackerGoogleSub = "google-sub-attacker-222";
-        String email = "commander@police.gov";
-
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put("sub", attackerGoogleSub);
-        attributes.put("email", email);
-        attributes.put("name", "Attacker");
-        attributes.put("email_verified", true);
-
-        when(oAuth2User.getAttributes()).thenReturn(attributes);
-
-        // Not found by the attacker's sub
-        when(userRepository.findByProviderAndProviderId(Provider.GOOGLE, attackerGoogleSub)).thenReturn(Optional.empty());
-
-        // Existing user has email but bound to originalGoogleSub
-        User existingUser = User.builder()
-                .id(UUID.randomUUID())
-                .email(email)
-                .name("Legitimate Commander")
-                .provider(Provider.GOOGLE)
-                .providerId(originalGoogleSub)
-                .enable(true)
-                .role(defaultRole)
-                .build();
-
-        when(userRepository.findByEmail(email)).thenReturn(Optional.of(existingUser));
-
-        oAuth2SuccessHandler.onAuthenticationSuccess(request, response, authentication);
-
-        ArgumentCaptor<String> redirectCaptor = ArgumentCaptor.forClass(String.class);
-        verify(response).sendRedirect(redirectCaptor.capture());
-        assertThat(redirectCaptor.getValue()).contains("Account+already+linked+to+a+different+Google+identity");
-
-        verify(jwtService, never()).generateRefreshToken(any(), any());
-    }
-
-    @Test
-    @DisplayName("Security: Reject Google login when email is bound to another third-party provider (GITHUB)")
-    void shouldRejectCrossProviderCollision() throws Exception {
-        String googleSub = "google-sub-333";
-        String email = "developer.officer@police.gov";
-
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put("sub", googleSub);
-        attributes.put("email", email);
-        attributes.put("name", "Officer Dev");
-        attributes.put("email_verified", true);
-
-        when(oAuth2User.getAttributes()).thenReturn(attributes);
-        when(userRepository.findByProviderAndProviderId(Provider.GOOGLE, googleSub)).thenReturn(Optional.empty());
-
-        User existingGithubUser = User.builder()
-                .id(UUID.randomUUID())
-                .email(email)
-                .name("Officer Dev")
                 .provider(Provider.GITHUB)
-                .providerId("github-id-999")
+                .providerId(githubId)
                 .enable(true)
                 .role(defaultRole)
+                .policePost("Field Officer")
                 .build();
 
-        when(userRepository.findByEmail(email)).thenReturn(Optional.of(existingGithubUser));
+        when(userRepository.findByProviderAndProviderId(Provider.GITHUB, githubId)).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenReturn(existingUser);
+        when(jwtService.generateRefreshToken(any(), any())).thenReturn("mock-github-refresh-token");
 
         oAuth2SuccessHandler.onAuthenticationSuccess(request, response, authentication);
 
-        ArgumentCaptor<String> redirectCaptor = ArgumentCaptor.forClass(String.class);
-        verify(response).sendRedirect(redirectCaptor.capture());
-        assertThat(redirectCaptor.getValue()).contains("Account+was+registered+via+GITHUB");
-
-        verify(jwtService, never()).generateRefreshToken(any(), any());
-    }
-
-    @Test
-    @DisplayName("Safe Linking: Allow linking Google ID to existing LOCAL user if email_verified is true")
-    void shouldLinkGoogleToLocalUserWhenEmailVerified() throws Exception {
-        String googleSub = "google-sub-555";
-        String email = "local.user@police.gov";
-
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put("sub", googleSub);
-        attributes.put("email", email);
-        attributes.put("name", "Local Officer");
-        attributes.put("email_verified", true);
-
-        when(oAuth2User.getAttributes()).thenReturn(attributes);
-        when(userRepository.findByProviderAndProviderId(Provider.GOOGLE, googleSub)).thenReturn(Optional.empty());
-
-        User localUser = User.builder()
-                .id(UUID.randomUUID())
-                .email(email)
-                .name("Local Officer")
-                .provider(Provider.LOCAL)
-                .enable(true)
-                .role(defaultRole)
-                .policePost("Wakad Station")
-                .build();
-
-        when(userRepository.findByEmail(email)).thenReturn(Optional.of(localUser));
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(jwtService.generateRefreshToken(any(), any())).thenReturn("mock-refresh-token");
-
-        oAuth2SuccessHandler.onAuthenticationSuccess(request, response, authentication);
-
-        // Verify user was linked to Google with googleSub
-        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).save(userCaptor.capture());
-        assertThat(userCaptor.getValue().getProvider()).isEqualTo(Provider.GOOGLE);
-        assertThat(userCaptor.getValue().getProviderId()).isEqualTo(googleSub);
-
-        verify(cookieService).attachRefreshCookie(eq(response), eq("mock-refresh-token"), eq(86400));
+        verify(userRepository).findByProviderAndProviderId(Provider.GITHUB, githubId);
+        verify(cookieService).attachRefreshCookie(eq(response), eq("mock-github-refresh-token"), eq(86400));
         verify(response).sendRedirect("http://localhost:5173/oauth/success");
     }
 
     @Test
-    @DisplayName("New User: Register new user with verified Google identity")
-    void shouldRegisterNewUserWithVerifiedGoogleIdentity() throws Exception {
-        String googleSub = "google-sub-777";
+    @DisplayName("GitHub Auth: Register new user with stable GitHub ID")
+    void shouldRegisterNewUserWithGithubIdentity() throws Exception {
+        when(authentication.getAuthorizedClientRegistrationId()).thenReturn("github");
+
+        String githubId = "github-new-id-99999";
         String email = "new.officer@police.gov";
 
         Map<String, Object> attributes = new HashMap<>();
-        attributes.put("sub", googleSub);
-        attributes.put("email", email);
+        attributes.put("id", githubId);
+        attributes.put("login", "new_officer");
         attributes.put("name", "New Officer");
-        attributes.put("picture", "http://image.url/pic.jpg");
-        attributes.put("email_verified", true);
+        attributes.put("avatar_url", "http://avatars.github.com/u/99999");
+        attributes.put("email", email);
 
         when(oAuth2User.getAttributes()).thenReturn(attributes);
-        when(userRepository.findByProviderAndProviderId(Provider.GOOGLE, googleSub)).thenReturn(Optional.empty());
+        when(userRepository.findByProviderAndProviderId(Provider.GITHUB, githubId)).thenReturn(Optional.empty());
         when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
 
         User savedUser = User.builder()
                 .id(UUID.randomUUID())
                 .email(email)
                 .name("New Officer")
-                .provider(Provider.GOOGLE)
-                .providerId(googleSub)
+                .provider(Provider.GITHUB)
+                .providerId(githubId)
                 .enable(true)
                 .role(defaultRole)
                 .build();
 
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
-        when(jwtService.generateRefreshToken(any(), any())).thenReturn("mock-refresh-token");
+        when(jwtService.generateRefreshToken(any(), any())).thenReturn("mock-new-refresh-token");
 
         oAuth2SuccessHandler.onAuthenticationSuccess(request, response, authentication);
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(userCaptor.capture());
         assertThat(userCaptor.getValue().getEmail()).isEqualTo(email);
-        assertThat(userCaptor.getValue().getProvider()).isEqualTo(Provider.GOOGLE);
-        assertThat(userCaptor.getValue().getProviderId()).isEqualTo(googleSub);
+        assertThat(userCaptor.getValue().getProvider()).isEqualTo(Provider.GITHUB);
+        assertThat(userCaptor.getValue().getProviderId()).isEqualTo(githubId);
 
         verify(response).sendRedirect("http://localhost:5173/oauth/success");
+    }
+
+    @Test
+    @DisplayName("Security: Reject disabled account during OAuth login")
+    void shouldRejectDisabledAccountDuringOAuthLogin() throws Exception {
+        when(authentication.getAuthorizedClientRegistrationId()).thenReturn("github");
+
+        String githubId = "github-disabled-user-777";
+        Map<String, Object> attributes = new HashMap<>();
+        attributes.put("id", githubId);
+        attributes.put("login", "disabled_officer");
+        attributes.put("email", "disabled@police.gov");
+
+        when(oAuth2User.getAttributes()).thenReturn(attributes);
+
+        User disabledUser = User.builder()
+                .id(UUID.randomUUID())
+                .email("disabled@police.gov")
+                .name("Disabled Officer")
+                .provider(Provider.GITHUB)
+                .providerId(githubId)
+                .enable(false) // Disabled
+                .role(defaultRole)
+                .build();
+
+        when(userRepository.findByProviderAndProviderId(Provider.GITHUB, githubId)).thenReturn(Optional.of(disabledUser));
+        when(userRepository.save(any(User.class))).thenReturn(disabledUser);
+
+        oAuth2SuccessHandler.onAuthenticationSuccess(request, response, authentication);
+
+        ArgumentCaptor<String> redirectCaptor = ArgumentCaptor.forClass(String.class);
+        verify(response).sendRedirect(redirectCaptor.capture());
+        assertThat(redirectCaptor.getValue()).contains("User+account+is+disabled");
+
+        verify(jwtService, never()).generateRefreshToken(any(), any());
     }
 }
