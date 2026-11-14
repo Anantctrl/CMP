@@ -11,15 +11,14 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @OpenAPIDefinition(
         info = @Info(
-                title = "Auth Application build by Durgesh Tiwari.",
-                description = "Generic auth app that can be used with any application.",
+                title = "COPMAP APPLICATION BUILT BY ANANT GUPTA.",
+                description = "Generic auth app with two data base and cache redis.",
                 contact = @Contact(
-                        name = "Durgesh Kumar Tiwari",
-                        url = "https://www.substringtechnologies.com/",
-                        email = "support@substringtechnologies.com"
+                        name = "Anant Gupta",
+                        email = "anantgggmm@gmail.com"
                 ),
                 version = "1.0",
-                summary = "This app is very useful if you dont want create auth app from scratch."
+                summary = "COPMAP."
 
 
 
