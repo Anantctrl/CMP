@@ -8,9 +8,12 @@ import com.substring.auth.app.auth.entities.RefreshToken;
 import com.substring.auth.app.auth.entities.User;
 import com.substring.auth.app.auth.repositories.RefreshTokenRepository;
 import com.substring.auth.app.auth.repositories.UserRepository;
+import com.substring.auth.app.auth.services.AuthService;
 import com.substring.auth.app.auth.services.impl.CookieService;
 import com.substring.auth.app.auth.services.impl.JwtService;
-import com.substring.auth.app.auth.services.AuthService;
+import com.substring.auth.app.officer.entity.OfficerProfile;
+import com.substring.auth.app.officer.repository.OfficerProfileRepository;
+import org.springframework.cache.CacheManager;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -44,6 +47,8 @@ public class AuthController {
     private final JwtService jwtService;
     private final ModelMapper mapper;
     private final CookieService cookieService;
+    private final OfficerProfileRepository officerRepository;
+    private final CacheManager cacheManager;
 
     @PostMapping("/login")
     public ResponseEntity<TokenResponse> login(
@@ -62,6 +67,25 @@ public class AuthController {
         if (!user.isEnable()) {
             throw new DisabledException("User is disabled");
         }
+
+        // Ensure officer profile exists in PostgreSQL and refresh Redis directory
+        try {
+            OfficerProfile profile = officerRepository.findByMysqlUserId(user.getId())
+                    .orElseGet(() -> {
+                        OfficerProfile op = new OfficerProfile();
+                        op.setMysqlUserId(user.getId());
+                        return op;
+                    });
+            String desig = (user.getPolicePost() != null && !user.getPolicePost().isBlank())
+                    ? user.getPolicePost().trim()
+                    : "Officer";
+            profile.setDesignation(desig);
+            profile.setOfficerName(user.getName() != null && !user.getName().isBlank() ? user.getName() : "Officer");
+            officerRepository.save(profile);
+            if (cacheManager != null && cacheManager.getCache("officers_directory") != null) {
+                cacheManager.getCache("officers_directory").clear();
+            }
+        } catch (Exception ignored) {}
 
         String jti = UUID.randomUUID().toString();
 

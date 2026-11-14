@@ -71,14 +71,25 @@ export const TacticalMapView: React.FC<TacticalMapViewProps> = ({
     }
   }, [])
 
-  // Invalidate size on locations update or tab change
+  // Invalidate size on locations update or tab change, and on window resize
   useEffect(() => {
     const timer = setTimeout(() => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.invalidateSize()
       }
     }, 200)
-    return () => clearTimeout(timer)
+
+    const handleResize = () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize()
+      }
+    }
+    window.addEventListener("resize", handleResize)
+
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener("resize", handleResize)
+    }
   }, [locations])
 
   // Create custom police tactical HTML marker
@@ -236,33 +247,33 @@ export const TacticalMapView: React.FC<TacticalMapViewProps> = ({
   return (
     <div className="relative rounded-xl overflow-hidden border border-border shadow-md bg-card">
       {/* Top Map Tactical Bar */}
-      <div className="absolute top-3 right-3 z-[1000] flex gap-2">
+      <div className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 z-[1000] flex gap-2">
         <Button
           size="sm"
           variant="secondary"
           onClick={handleCenterAll}
-          className="gap-1.5 bg-background/90 backdrop-blur shadow-md hover:bg-background text-xs font-semibold"
+          className="gap-1.5 bg-background/90 backdrop-blur shadow-md hover:bg-background text-xs font-semibold h-8 sm:h-9 px-2.5 sm:px-3"
         >
           <Crosshair className="w-3.5 h-3.5 text-primary" />
-          Center Team ({locations.length})
+          <span className="hidden xs:inline">Center Team</span> ({locations.length})
         </Button>
       </div>
 
       {/* Map Legend */}
-      <div className="absolute bottom-3 left-3 z-[1000] bg-background/90 backdrop-blur border border-border/80 px-3 py-1.5 rounded-lg shadow-md flex items-center gap-3 text-xs">
-        <span className="font-semibold text-muted-foreground flex items-center gap-1">
+      <div className="absolute bottom-2.5 left-2.5 sm:bottom-3 sm:left-3 z-[1000] bg-background/90 backdrop-blur border border-border/80 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg shadow-md flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs max-w-[calc(100%-1.5rem)] flex-wrap">
+        <span className="font-semibold text-muted-foreground hidden sm:flex items-center gap-1">
           <Layers className="w-3 h-3" /> Status:
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+          <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
           <span className="text-emerald-500 font-medium">Live</span>
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
+          <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-amber-500 inline-block" />
           <span className="text-amber-500 font-medium">Degraded</span>
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" />
+          <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-rose-500 inline-block" />
           <span className="text-rose-500 font-medium">Stale</span>
         </span>
       </div>

@@ -2,8 +2,10 @@ package com.substring.auth.app.auth.config;
 
 import com.substring.auth.app.auth.entities.Provider;
 import com.substring.auth.app.auth.entities.RefreshToken;
+import com.substring.auth.app.auth.entities.Role;
 import com.substring.auth.app.auth.entities.User;
 import com.substring.auth.app.auth.repositories.RefreshTokenRepository;
+import com.substring.auth.app.auth.repositories.RoleRepository;
 import com.substring.auth.app.auth.repositories.UserRepository;
 import com.substring.auth.app.auth.services.impl.CookieService;
 import com.substring.auth.app.auth.services.impl.JwtService;
@@ -31,6 +33,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final JwtService jwtService;
     private final CookieService cookieService;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -38,46 +41,53 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     @Value("${app.auth.frontend.success-redirect}")
     private String frontEndSuccessUrl;
 
-
     @Override
     @Transactional
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
-        logger.info("Successful authentication");
-        logger.info(authentication.toString());
-
+    public void onAuthenticationSuccess(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Authentication authentication
+    ) throws IOException, ServletException {
 
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
-
-        //identify user:
 
         String registrationId = "unknown";
         if (authentication instanceof OAuth2AuthenticationToken token) {
             registrationId = token.getAuthorizedClientRegistrationId();
         }
 
-        logger.info("registrationId:" + registrationId);
-        logger.info("user:" + oAuth2User.getAttributes().toString());
+        // Sanitized non-sensitive log
+        logger.info("OAuth2 login initiated via provider: {}", registrationId);
+
+        Role defaultRole = roleRepository.findByName(AppConstants.DEFAULT_ROLE)
+                .or(() -> roleRepository.findByName("Not Assigned"))
+                .or(() -> roleRepository.findByName("NOT_ASSIGNED"))
+                .orElseGet(() -> {
+                    Role r = new Role();
+                    r.setName(AppConstants.DEFAULT_ROLE);
+                    return roleRepository.save(r);
+                });
 
         User user;
         switch (registrationId) {
             case "google" -> {
                 String googleId = oAuth2User.getAttributes().getOrDefault("sub", "").toString();
-
                 String email = oAuth2User.getAttributes().getOrDefault("email", "").toString();
                 String name = oAuth2User.getAttributes().getOrDefault("name", "").toString();
                 String picture = oAuth2User.getAttributes().getOrDefault("picture", "").toString();
+
                 User newUser = User.builder()
                         .email(email)
                         .name(name)
+                        .policePost("Field Officer")
+                        .role(defaultRole)
                         .image(picture)
                         .enable(true)
                         .provider(Provider.GOOGLE)
                         .providerId(googleId)
                         .build();
 
-
                 user = userRepository.findByEmail(email).orElseGet(() -> userRepository.save(newUser));
-
             }
 
             case "github" -> {
@@ -93,33 +103,20 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 User newUser = User.builder()
                         .email(email)
                         .name(name)
+                        .policePost("Field Officer")
+                        .role(defaultRole)
                         .image(image)
                         .enable(true)
                         .provider(Provider.GITHUB)
                         .providerId(githubId)
                         .build();
+
                 user = userRepository.findByEmail(email).orElseGet(() -> userRepository.save(newUser));
-
             }
 
-            default -> {
-                throw new RuntimeException("Invalid registration id");
-            }
-
+            default -> throw new RuntimeException("Invalid registration id: " + registrationId);
         }
 
-
-        //username
-        //user email
-        //new usercreate
-
-
-        //jwt token__ token ke sath front -- pe fir redirect.
-
-        //refresh:
-//        user--> refresh token unko revoke
-
-//        refresh token bana ke dunga:
         String jti = UUID.randomUUID().toString();
         RefreshToken refreshTokenOb = RefreshToken.builder()
                 .jti(jti)
@@ -131,11 +128,10 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
         refreshTokenRepository.save(refreshTokenOb);
 
-        String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user, refreshTokenOb.getJti());
         cookieService.attachRefreshCookie(response, refreshToken, (int) jwtService.getRefreshTtlSeconds());
-//        response.getWriter().write("Login successful");
-        response.sendRedirect(frontEndSuccessUrl);
 
+        logger.info("OAuth2 login completed successfully for user ID: {}", user.getId());
+        response.sendRedirect(frontEndSuccessUrl);
     }
 }

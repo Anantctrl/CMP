@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import type { OfficerLiveLocation } from "@/services/trackingService"
 import { getAreaName, getFastHeuristicArea } from "@/services/geoService"
-import { MapPin, Navigation, ExternalLink, Copy, Check, Radio, Shield } from "lucide-react"
+import { MapPin, Navigation, ExternalLink, Copy, Check, Radio, Shield, FileDown } from "lucide-react"
 import toast from "react-hot-toast"
 
 interface OfficerMapModalProps {
@@ -21,13 +21,15 @@ interface OfficerMapModalProps {
   onOpenChange: (open: boolean) => void
   location: OfficerLiveLocation | null
   officerRole?: string
+  onDownloadReport?: () => void
 }
 
 export const OfficerMapModal: React.FC<OfficerMapModalProps> = ({
   open,
   onOpenChange,
   location,
-  officerRole
+  officerRole,
+  onDownloadReport
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
@@ -151,8 +153,16 @@ export const OfficerMapModal: React.FC<OfficerMapModalProps> = ({
       circleRef.current = circle
     }, 150)
 
+    const handleResize = () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize()
+      }
+    }
+    window.addEventListener("resize", handleResize)
+
     return () => {
       clearTimeout(timer)
+      window.removeEventListener("resize", handleResize)
     }
   }, [open, location])
 
@@ -196,49 +206,49 @@ export const OfficerMapModal: React.FC<OfficerMapModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl p-0 overflow-hidden sm:rounded-2xl">
-        <DialogHeader className="p-6 pb-4 border-b border-border bg-card/60">
-          <div className="flex justify-between items-start gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-                <Shield className="w-6 h-6" />
+      <DialogContent className="w-[95vw] max-w-2xl p-0 overflow-hidden rounded-2xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-border bg-card/60 shrink-0">
+          <div className="flex justify-between items-start gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                <Shield className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <div>
-                <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <div className="min-w-0">
+                <DialogTitle className="text-lg sm:text-xl font-bold flex items-center gap-2 truncate">
                   {location.officerName || `Officer ${location.officerId.substring(0, 8)}`}
                 </DialogTitle>
-                <DialogDescription className="text-sm font-medium text-muted-foreground flex items-center gap-2 mt-0.5">
+                <DialogDescription className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1.5 mt-0.5 truncate">
                   <span>{location.designation}</span>
                   {officerRole && <span>&bull;</span>}
                   {officerRole && (
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-[10px] sm:text-xs">
                       {officerRole.replace("_", " ")}
                     </Badge>
                   )}
                 </DialogDescription>
               </div>
             </div>
-            <div>{getFreshnessBadge(location.freshnessStatus)}</div>
+            <div className="shrink-0">{getFreshnessBadge(location.freshnessStatus)}</div>
           </div>
 
           {/* Area & GPS Detail Card */}
-          <div className="mt-4 p-3.5 rounded-xl bg-muted/60 border border-border/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div className="space-y-1">
-              <div className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-                <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
+          <div className="mt-3 sm:mt-4 p-3 sm:p-3.5 rounded-xl bg-muted/60 border border-border/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-3">
+            <div className="space-y-0.5 sm:space-y-1 min-w-0">
+              <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-foreground flex-wrap">
+                <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-500 shrink-0" />
                 <span>Detected Area:</span>
-                <span className="text-primary font-semibold">{areaName || "Detecting area..."}</span>
+                <span className="text-primary font-semibold truncate">{areaName || "Detecting area..."}</span>
               </div>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono">
+              <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs text-muted-foreground font-mono flex-wrap">
                 <span>{location.latitude.toFixed(5)}° N, {location.longitude.toFixed(5)}° E</span>
                 <span>&bull;</span>
-                <span>Accuracy &plusmn;{location.accuracyMeters || 5}m</span>
+                <span>&plusmn;{location.accuracyMeters || 5}m</span>
               </div>
             </div>
 
-            <div className="text-right text-xs text-muted-foreground">
+            <div className="text-left sm:text-right text-[11px] sm:text-xs text-muted-foreground shrink-0">
               <div className="flex items-center gap-1 sm:justify-end font-medium">
-                <Radio className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
+                <Radio className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-500 animate-pulse" />
                 <span>Last Telemetry</span>
               </div>
               <div>{new Date(location.recordedAt).toLocaleTimeString()}</div>
@@ -247,29 +257,40 @@ export const OfficerMapModal: React.FC<OfficerMapModalProps> = ({
         </DialogHeader>
 
         {/* Tactical Interactive Leaflet Map */}
-        <div className="relative w-full h-80 sm:h-96 bg-zinc-900">
+        <div className="relative w-full h-64 sm:h-80 md:h-96 bg-zinc-900 flex-1">
           <div ref={mapContainerRef} className="w-full h-full" style={{ zIndex: 10 }} />
-          <div className="absolute top-3 left-3 z-[1000] bg-background/90 backdrop-blur px-2.5 py-1 rounded-md text-xs font-semibold border border-border flex items-center gap-1.5 shadow">
-            <Navigation className="w-3.5 h-3.5 text-primary animate-spin" />
+          <div className="absolute top-2.5 left-2.5 z-[1000] bg-background/90 backdrop-blur px-2 sm:px-2.5 py-1 rounded-md text-[11px] sm:text-xs font-semibold border border-border flex items-center gap-1.5 shadow">
+            <Navigation className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary animate-spin" />
             Live Tactical Telemetry Feed
           </div>
         </div>
 
         {/* Modal Footer Controls */}
-        <DialogFooter className="p-4 bg-card/60 border-t border-border flex sm:justify-between items-center gap-2">
-          <div className="text-xs text-muted-foreground font-medium hidden sm:block">
+        <DialogFooter className="p-3 sm:p-4 bg-card/60 border-t border-border flex flex-col sm:flex-row sm:justify-between items-center gap-2 shrink-0">
+          <div className="text-xs text-muted-foreground font-medium hidden sm:block truncate">
             Target UUID: {location.officerId.substring(0, 16)}...
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-            <Button size="sm" variant="outline" onClick={handleCopyCoords} className="gap-1.5 text-xs">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+            {onDownloadReport && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onDownloadReport}
+                className="gap-1.5 text-xs h-9 flex-1 sm:flex-initial text-primary border-primary/30 hover:bg-primary/10"
+              >
+                <FileDown className="w-3.5 h-3.5" />
+                Dossier (PDF)
+              </Button>
+            )}
+            <Button size="sm" variant="outline" onClick={handleCopyCoords} className="gap-1.5 text-xs h-9 flex-1 sm:flex-initial">
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
               {copied ? "Copied" : "Copy GPS"}
             </Button>
-            <Button size="sm" variant="secondary" onClick={handleOpenGoogleMaps} className="gap-1.5 text-xs">
+            <Button size="sm" variant="secondary" onClick={handleOpenGoogleMaps} className="gap-1.5 text-xs h-9 flex-1 sm:flex-initial">
               <ExternalLink className="w-3.5 h-3.5" />
-              Open in Maps
+              Maps
             </Button>
-            <Button size="sm" onClick={() => onOpenChange(false)}>
+            <Button size="sm" onClick={() => onOpenChange(false)} className="h-9 px-4 text-xs flex-1 sm:flex-initial">
               Close
             </Button>
           </div>

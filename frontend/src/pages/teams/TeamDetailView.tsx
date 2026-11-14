@@ -36,7 +36,8 @@ import {
   sendLocationUpdate,
   type OfficerLiveLocation
 } from "@/services/trackingService"
-import { getAvailableOfficers, type OfficerDirectoryEntry } from "@/services/officerService"
+import { getAvailableOfficers, getAllOfficers, type OfficerDirectoryEntry } from "@/services/officerService"
+import { generateTeamReportPDF, generateOfficerReportPDF } from "@/services/pdfReportService"
 import { TacticalMapView } from "@/components/map/TacticalMapView"
 import { OfficerMapModal } from "@/components/map/OfficerMapModal"
 import { getFastHeuristicArea, getAreaName } from "@/services/geoService"
@@ -66,7 +67,8 @@ import {
   UserCheck,
   Search,
   UserPlus,
-  Check
+  Check,
+  FileDown
 } from "lucide-react"
 import toast from "react-hot-toast"
 
@@ -153,6 +155,81 @@ export default function TeamDetailView() {
   const isSupervisor = user?.role?.name?.toLowerCase() === "supervisor" || userRole === "SUPERVISOR"
   const isPlanner = isSupervisor || userRole === "SENIOR_PLANNER"
   const isLead = isSupervisor || isPlanner || userRole === "TEAM_LEAD"
+  const isControlOperator = userRole === "CONTROL_OPERATOR"
+  const canDownloadReport =
+    isSupervisor ||
+    isPlanner ||
+    isLead ||
+    isControlOperator ||
+    userRole === "ADMINISTRATOR"
+
+  const [allOfficersDirectory, setAllOfficersDirectory] = useState<OfficerDirectoryEntry[]>([])
+
+  useEffect(() => {
+    getAllOfficers()
+      .then((data) => setAllOfficersDirectory(data))
+      .catch(() => {})
+  }, [])
+
+  // Download Comprehensive Team Tactical Dossier (PDF)
+  const handleDownloadTeamReport = () => {
+    if (!team) return
+    toast.loading("Compiling tactical unit dossier (PDF)...", { id: "team-pdf" })
+    try {
+      generateTeamReportPDF({
+        team,
+        members,
+        tasks,
+        taskAssignmentsMap,
+        operations,
+        liveLocations,
+        trackingAreaNames,
+        generatedBy: {
+          name: user?.name,
+          email: user?.email,
+          role: team.userRoleInTeam || (isSupervisor ? "SUPERVISOR" : "COMMAND")
+        }
+      })
+      toast.success("Tactical Unit Dossier downloaded!", { id: "team-pdf" })
+    } catch (err) {
+      console.error("PDF generation error:", err)
+      toast.error("Failed to generate PDF dossier", { id: "team-pdf" })
+    }
+  }
+
+  // Download Individual Officer Performance & Task Dossier (PDF)
+  const handleDownloadOfficerReport = (member: TeamMember) => {
+    toast.loading(`Compiling dossier for ${member.officerName || "Officer"}...`, { id: "officer-pdf" })
+    try {
+      const officerLoc = liveLocations.find((l) => l.officerId === member.officerId)
+      const dirEntry =
+        allOfficersDirectory.find((o) => o.officerId === member.officerId) ||
+        availableOfficers.find((o) => o.officerId === member.officerId)
+      const post = dirEntry?.policePost
+      const area = officerLoc
+        ? trackingAreaNames[officerLoc.officerId] || getFastHeuristicArea(officerLoc.latitude, officerLoc.longitude)
+        : undefined
+
+      generateOfficerReportPDF({
+        officer: member,
+        team,
+        tasks,
+        taskAssignmentsMap,
+        liveLocation: officerLoc,
+        policePost: post,
+        detectedArea: area,
+        generatedBy: {
+          name: user?.name,
+          email: user?.email,
+          role: team?.userRoleInTeam || (isSupervisor ? "SUPERVISOR" : "COMMAND")
+        }
+      })
+      toast.success(`Dossier for ${member.officerName || "Officer"} downloaded!`, { id: "officer-pdf" })
+    } catch (err) {
+      console.error("Officer PDF generation error:", err)
+      toast.error("Failed to generate officer dossier", { id: "officer-pdf" })
+    }
+  }
 
   const loadLiveLocations = useCallback(async () => {
     if (!teamId) return
@@ -489,7 +566,7 @@ export default function TeamDetailView() {
 
   if (loading && !team) {
     return (
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <div className="px-4 py-6 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6">
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-40 w-full" />
       </div>
@@ -497,32 +574,42 @@ export default function TeamDetailView() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 select-none">
+    <div className="px-4 py-6 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6 select-none">
       {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card border border-border p-6 rounded-2xl shadow-sm">
-        <div className="space-y-1">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card border border-border px-4 py-5 sm:p-6 rounded-2xl shadow-sm">
+        <div className="space-y-1 min-w-0">
           <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard/teams")} className="gap-2 mb-2 -ml-2 text-muted-foreground">
             <ArrowLeft className="w-4 h-4" />
             Back to Teams
           </Button>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">{team?.name}</h1>
-            <Badge variant="default" className="text-xs">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight truncate">{team?.name}</h1>
+            <Badge variant="default" className="text-xs shrink-0">
               {team?.userRoleInTeam.replace("_", " ")}
             </Badge>
           </div>
           <p className="text-muted-foreground text-sm">{team?.description || "Tactical Command Unit"}</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          {canDownloadReport && (
+            <Button
+              onClick={handleDownloadTeamReport}
+              variant="outline"
+              className="gap-2 shadow-xs flex-1 sm:flex-initial justify-center border-primary/40 hover:bg-primary/10 text-foreground"
+            >
+              <FileDown className="w-4 h-4 text-primary" />
+              Download Unit Dossier (PDF)
+            </Button>
+          )}
           {isPlanner && (
-            <Button onClick={() => setOpenTaskModal(true)} className="gap-2 shadow-xs">
+            <Button onClick={() => setOpenTaskModal(true)} className="gap-2 shadow-xs flex-1 sm:flex-initial justify-center">
               <Plus className="w-4 h-4" />
               New Task
             </Button>
           )}
           {isPlanner && (
-            <Button onClick={() => setOpenOperationModal(true)} variant="outline" className="gap-2 shadow-xs">
+            <Button onClick={() => setOpenOperationModal(true)} variant="outline" className="gap-2 shadow-xs flex-1 sm:flex-initial justify-center">
               <Shield className="w-4 h-4" />
               New Operation
             </Button>
@@ -532,14 +619,16 @@ export default function TeamDetailView() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-2 sm:grid-cols-6 w-full max-w-3xl">
-          <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
-          <TabsTrigger value="operations">Operations ({operations.length})</TabsTrigger>
-          <TabsTrigger value="tracking">Live Map</TabsTrigger>
-          <TabsTrigger value="members">Officers ({members.length})</TabsTrigger>
-          <TabsTrigger value="audit">Audit Log</TabsTrigger>
-          {isSupervisor && <TabsTrigger value="approvals">Approvals ({approvals.length})</TabsTrigger>}
-        </TabsList>
+        <div className="overflow-x-auto pb-1 -mx-1 px-1">
+          <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full min-w-[440px] sm:min-w-0 sm:max-w-3xl">
+            <TabsTrigger value="tasks" className="text-xs sm:text-sm">Tasks ({tasks.length})</TabsTrigger>
+            <TabsTrigger value="operations" className="text-xs sm:text-sm">Ops ({operations.length})</TabsTrigger>
+            <TabsTrigger value="tracking" className="text-xs sm:text-sm">Live Map</TabsTrigger>
+            <TabsTrigger value="members" className="text-xs sm:text-sm">Officers ({members.length})</TabsTrigger>
+            <TabsTrigger value="audit" className="text-xs sm:text-sm">Audit Log</TabsTrigger>
+            {isSupervisor && <TabsTrigger value="approvals" className="text-xs sm:text-sm">Approvals ({approvals.length})</TabsTrigger>}
+          </TabsList>
+        </div>
 
         {/* --- TASKS TAB --- */}
         <TabsContent value="tasks" className="space-y-4">
@@ -620,6 +709,28 @@ export default function TeamDetailView() {
                                     <span className="font-medium text-primary">
                                       — {a.responsibility}
                                     </span>
+                                    {canDownloadReport && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const member = members.find((m) => m.officerId === a.officerId) || {
+                                            id: a.officerId,
+                                            teamId: team?.id || "",
+                                            officerId: a.officerId,
+                                            officerName: a.officerName,
+                                            designation: a.officerDesignation || "Officer",
+                                            teamRole: "FIELD_OPERATOR" as const,
+                                            joinedAt: a.assignedAt
+                                          }
+                                          handleDownloadOfficerReport(member)
+                                        }}
+                                        className="text-muted-foreground hover:text-primary transition-colors cursor-pointer inline-flex items-center gap-0.5 text-[10px] ml-1"
+                                        title="Download Officer Dossier (PDF)"
+                                      >
+                                        <FileDown className="w-3 h-3 text-primary" />
+                                        <span>PDF</span>
+                                      </button>
+                                    )}
                                   </div>
                                   <Badge variant="outline" className="text-[10px]">{a.status}</Badge>
                                 </div>
@@ -751,7 +862,7 @@ export default function TeamDetailView() {
                   Streaming 20-second officer GPS updates with automated area detection and signal freshness validation.
                 </p>
               </div>
-              <div className="flex gap-2 items-center">
+              <div className="flex flex-wrap gap-2 items-center">
                 <Button size="sm" variant="outline" onClick={loadLiveLocations} className="gap-2">
                   <RefreshCw className="w-4 h-4" />
                   Refresh
@@ -780,7 +891,7 @@ export default function TeamDetailView() {
                 </Button>
               </div>
             ) : (
-              <div className="rounded-lg border overflow-hidden">
+              <div className="rounded-lg border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/30">
@@ -827,15 +938,40 @@ export default function TeamDetailView() {
                             {new Date(loc.recordedAt).toLocaleTimeString()}
                           </TableCell>
                           <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              size="xs"
-                              variant="outline"
-                              className="gap-1 text-xs"
-                              onClick={() => handleOpenOfficerModal(loc)}
-                            >
-                              <MapPin className="w-3.5 h-3.5 text-primary" />
-                              View Map
-                            </Button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              {canDownloadReport && (
+                                <Button
+                                  size="xs"
+                                  variant="outline"
+                                  className="gap-1 text-xs text-primary border-primary/30 hover:bg-primary/10"
+                                  onClick={() => {
+                                    const member = members.find((m) => m.officerId === loc.officerId) || {
+                                      id: loc.officerId,
+                                      teamId: team?.id || "",
+                                      officerId: loc.officerId,
+                                      officerName: loc.officerName,
+                                      designation: loc.designation,
+                                      teamRole: "FIELD_OPERATOR" as const,
+                                      joinedAt: loc.recordedAt
+                                    }
+                                    handleDownloadOfficerReport(member)
+                                  }}
+                                  title="Download Officer Dossier (PDF)"
+                                >
+                                  <FileDown className="w-3.5 h-3.5" />
+                                  PDF
+                                </Button>
+                              )}
+                              <Button
+                                size="xs"
+                                variant="outline"
+                                className="gap-1 text-xs"
+                                onClick={() => handleOpenOfficerModal(loc)}
+                              >
+                                <MapPin className="w-3.5 h-3.5 text-primary" />
+                                View Map
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       )
@@ -849,20 +985,21 @@ export default function TeamDetailView() {
 
         {/* --- MEMBERS TAB --- */}
         <TabsContent value="members" className="space-y-4">
-          <Card className="p-6">
-            <div className="flex justify-between items-center mb-6">
+          <Card className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
               <div>
                 <h3 className="text-lg font-bold">Roster & Hierarchy</h3>
                 <p className="text-sm text-muted-foreground">Assigned law-enforcement personnel.</p>
               </div>
               {isPlanner && (
-                <Button size="sm" onClick={() => setOpenAddMemberModal(true)} className="gap-2">
+                <Button size="sm" onClick={() => setOpenAddMemberModal(true)} className="gap-2 w-full sm:w-auto justify-center">
                   <Plus className="w-4 h-4" />
                   Add Member
                 </Button>
               )}
             </div>
 
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -871,7 +1008,7 @@ export default function TeamDetailView() {
                   <TableHead>Team Role</TableHead>
                   <TableHead>Live Location / Area</TableHead>
                   <TableHead>Joined Date</TableHead>
-                  {isPlanner && <TableHead className="text-right">Actions</TableHead>}
+                  {(isPlanner || canDownloadReport) && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -915,6 +1052,18 @@ export default function TeamDetailView() {
                         {new Date(m.joinedAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-right space-x-2">
+                        {canDownloadReport && (
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            className="gap-1 text-xs text-primary border-primary/30 hover:bg-primary/10"
+                            onClick={() => handleDownloadOfficerReport(m)}
+                            title="Download Officer Dossier & Assigned Tasks (PDF)"
+                          >
+                            <FileDown className="w-3 h-3" />
+                            Dossier PDF
+                          </Button>
+                        )}
                         {officerLoc && (
                           <Button
                             size="xs"
@@ -941,13 +1090,14 @@ export default function TeamDetailView() {
                 })}
               </TableBody>
             </Table>
+            </div>
           </Card>
         </TabsContent>
 
         {/* --- AUDIT TRAIL TAB --- */}
         <TabsContent value="audit" className="space-y-4">
-          <Card className="p-6">
-            <div className="flex justify-between items-center mb-4">
+          <Card className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
               <div>
                 <h3 className="text-lg font-bold flex items-center gap-2">
                   <History className="w-5 h-5 text-primary" />
@@ -960,6 +1110,7 @@ export default function TeamDetailView() {
             {auditLogs.length === 0 ? (
               <p className="text-sm text-muted-foreground">No audit entries logged yet for this team.</p>
             ) : (
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -982,6 +1133,7 @@ export default function TeamDetailView() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             )}
           </Card>
         </TabsContent>
@@ -989,11 +1141,12 @@ export default function TeamDetailView() {
         {/* --- APPROVALS TAB --- */}
         {isSupervisor && (
           <TabsContent value="approvals" className="space-y-4">
-            <Card className="p-6">
+            <Card className="p-4 sm:p-6">
               <h3 className="text-lg font-bold mb-4">Cross-Team Operation Authorizations</h3>
               {approvals.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No pending operation requests requiring authorization.</p>
               ) : (
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1031,6 +1184,7 @@ export default function TeamDetailView() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               )}
             </Card>
           </TabsContent>
@@ -1039,7 +1193,7 @@ export default function TeamDetailView() {
 
       {/* --- CREATE TASK MODAL --- */}
       <Dialog open={openTaskModal} onOpenChange={setOpenTaskModal}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <form onSubmit={handleCreateTask}>
             <DialogHeader>
               <DialogTitle>Dispatch Tactical Task</DialogTitle>
@@ -1074,9 +1228,9 @@ export default function TeamDetailView() {
                 <Textarea id="t-desc" value={taskDesc} onChange={(e) => setTaskDesc(e.target.value)} />
               </div>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpenTaskModal(false)}>Cancel</Button>
-              <Button type="submit">Dispatch Task</Button>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setOpenTaskModal(false)}>Cancel</Button>
+              <Button type="submit" className="w-full sm:w-auto">Dispatch Task</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -1084,7 +1238,7 @@ export default function TeamDetailView() {
 
       {/* --- ASSIGN OFFICER MODAL --- */}
       <Dialog open={openAssignModal} onOpenChange={setOpenAssignModal}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <form onSubmit={handleAssignOfficer}>
             <DialogHeader>
               <DialogTitle>Assign Officer to Task</DialogTitle>
@@ -1117,9 +1271,9 @@ export default function TeamDetailView() {
                 <Textarea id="a-inst" value={instructions} onChange={(e) => setInstructions(e.target.value)} />
               </div>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpenAssignModal(false)}>Cancel</Button>
-              <Button type="submit">Assign</Button>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setOpenAssignModal(false)}>Cancel</Button>
+              <Button type="submit" className="w-full sm:w-auto">Assign</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -1127,7 +1281,7 @@ export default function TeamDetailView() {
 
       {/* --- SUBMIT REPORT MODAL --- */}
       <Dialog open={openSubmitModal} onOpenChange={setOpenSubmitModal}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <form onSubmit={handleSubmitReport}>
             <DialogHeader>
               <DialogTitle>Submit Completion Report</DialogTitle>
@@ -1146,9 +1300,9 @@ export default function TeamDetailView() {
                 />
               </div>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpenSubmitModal(false)}>Cancel</Button>
-              <Button type="submit">Submit to Team Lead</Button>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setOpenSubmitModal(false)}>Cancel</Button>
+              <Button type="submit" className="w-full sm:w-auto">Submit to Team Lead</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -1156,7 +1310,7 @@ export default function TeamDetailView() {
 
       {/* --- ADD MEMBER MODAL (Redis-Powered Search by Name & Police Post) --- */}
       <Dialog open={openAddMemberModal} onOpenChange={setOpenAddMemberModal}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <form onSubmit={handleAddMember}>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -1283,11 +1437,11 @@ export default function TeamDetailView() {
               </div>
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpenAddMemberModal(false)}>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setOpenAddMemberModal(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={!newOfficerId}>
+              <Button type="submit" disabled={!newOfficerId} className="w-full sm:w-auto">
                 Add Officer to Unit
               </Button>
             </DialogFooter>
@@ -1297,7 +1451,7 @@ export default function TeamDetailView() {
 
       {/* --- CREATE OPERATION MODAL --- */}
       <Dialog open={openOperationModal} onOpenChange={setOpenOperationModal}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <form onSubmit={handleCreateOperation}>
             <DialogHeader>
               <DialogTitle>Create Operation</DialogTitle>
@@ -1326,9 +1480,9 @@ export default function TeamDetailView() {
                 <Textarea id="op-desc" value={opDesc} onChange={(e) => setOpDesc(e.target.value)} />
               </div>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpenOperationModal(false)}>Cancel</Button>
-              <Button type="submit">Establish Operation</Button>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setOpenOperationModal(false)}>Cancel</Button>
+              <Button type="submit" className="w-full sm:w-auto">Establish Operation</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -1340,6 +1494,22 @@ export default function TeamDetailView() {
         onOpenChange={setMapModalOpen}
         location={selectedOfficerLocation}
         officerRole={selectedOfficerRole}
+        onDownloadReport={
+          canDownloadReport && selectedOfficerLocation
+            ? () => {
+                const member = members.find((m) => m.officerId === selectedOfficerLocation.officerId) || {
+                  id: selectedOfficerLocation.officerId,
+                  teamId: team?.id || "",
+                  officerId: selectedOfficerLocation.officerId,
+                  officerName: selectedOfficerLocation.officerName,
+                  designation: selectedOfficerLocation.designation,
+                  teamRole: (selectedOfficerRole || "FIELD_OPERATOR") as any,
+                  joinedAt: selectedOfficerLocation.recordedAt
+                }
+                handleDownloadOfficerReport(member)
+              }
+            : undefined
+        }
       />
     </div>
   )

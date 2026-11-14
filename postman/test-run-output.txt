@@ -1,0 +1,248 @@
+﻿newman
+
+CopMap Tactical Police API - Full End-to-End Test Suite
+
+Γûí 1. Authentication & Identity
+Γöö 1.1 Register Supervisor Account
+  POST http://localhost:8082/api/v1/auth/register [201 Created, 822B, 590ms]
+  ΓêÜ  Status code is 201 Created
+  ΓêÜ  Supervisor registered with ID
+
+Γöö 1.2 Login as Supervisor
+  POST http://localhost:8082/api/v1/auth/login [200 OK, 1.69kB, 172ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Access token returned
+
+Γöö 1.3 Register Senior Planner Account
+  POST http://localhost:8082/api/v1/auth/register [201 Created, 825B, 172ms]
+  ΓêÜ  Status code is 201 Created
+
+Γöö 1.4 Login as Senior Planner
+  POST http://localhost:8082/api/v1/auth/login [200 OK, 1.69kB, 159ms]
+  ΓêÜ  Status code is 200 OK
+
+Γöö 1.5 Register Field Beat Officer Account
+  POST http://localhost:8082/api/v1/auth/register [201 Created, 821B, 186ms]
+  ΓêÜ  Status code is 201 Created
+
+Γöö 1.6 Login as Field Beat Officer
+  POST http://localhost:8082/api/v1/auth/login [200 OK, 1.69kB, 191ms]
+  ΓêÜ  Status code is 200 OK
+
+Γûí 2. User Profiles & Directory
+Γöö 2.1 Get All Users (Supervisor Authority)
+  GET http://localhost:8082/api/v1/users [200 OK, 6.12kB, 68ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Returns list of users
+
+Γöö 2.2 Get User by Email
+  GET http://localhost:8082/api/v1/users/email/officer.test.1794677612@police.gov [200 OK, 854B, 19ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Email matches registered officer
+
+Γöö 2.3 Get User by ID
+  GET http://localhost:8082/api/v1/users/ada401f6-fd64-427b-be1a-644a31dcb8cc [200 OK, 810B, 18ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  User ID matches
+
+Γûí 3. Tactical Teams Creation
+Γöö 3.1 Create Primary Tactical Unit (Alpha QRT)
+  POST http://localhost:8082/api/v1/teams [201 Created, 714B, 62ms]
+  ΓêÜ  Status code is 201 Created
+  ΓêÜ  Team created with UUID
+
+Γöö 3.2 Create Secondary Unit (Bravo Perimeter)
+  POST http://localhost:8082/api/v1/teams [201 Created, 698B, 27ms]
+  ΓêÜ  Status code is 201 Created
+  ΓêÜ  Secondary team created
+
+Γöö 3.3 Get Authorized Teams
+  GET http://localhost:8082/api/v1/teams [200 OK, 2.54kB, 87ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Teams array returned
+
+Γöö 3.4 Get Team Detail by ID
+  GET http://localhost:8082/api/v1/teams/6881c2dd-237b-474e-8d99-e6f384a8adbf [200 OK, 703B, 28ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Team ID matches
+
+Γûí 4. Redis Officer Directory & Roster Enrollment
+Γöö 4.1 Get All Officers (Supervisor - Redis Cached)
+  GET http://localhost:8082/api/v1/officers [200 OK, 4.58kB, 95ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Officer directory array returned
+
+Γöö 4.2 Evict Redis Directory Cache
+  POST http://localhost:8082/api/v1/officers/cache/evict [204 No Content, 371B, 25ms]
+  ΓêÜ  Status code is 204 No Content or 200
+
+Γöö 4.3 Enroll Senior Planner to Team 1 as SENIOR_PLANNER
+  POST http://localhost:8082/api/v1/teams/6881c2dd-237b-474e-8d99-e6f384a8adbf/members [201 Created, 732B, 37ms]
+  ΓêÜ  Status code is 201 Created
+  ΓêÜ  Planner added with SENIOR_PLANNER role
+
+Γöö 4.4 Enroll Field Officer to Team 1 as FIELD_OPERATOR
+  POST http://localhost:8082/api/v1/teams/6881c2dd-237b-474e-8d99-e6f384a8adbf/members [201 Created, 729B, 66ms]
+  ΓêÜ  Status code is 201 Created
+
+Γöö 4.5 Get Available Officers for Team
+  GET http://localhost:8082/api/v1/officers/available?teamId=6881c2dd-237b-474e-8d99-e6f384a8adbf [200 OK, 4kB, 133ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Available officers array returned
+
+Γöö 4.6 List Team Members
+  GET http://localhost:8082/api/v1/teams/6881c2dd-237b-474e-8d99-e6f384a8adbf/members [200 OK, 1.02kB, 57ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Roster contains field officer
+
+Γöö 4.7 Get Team Audit Log
+  GET http://localhost:8082/api/v1/teams/6881c2dd-237b-474e-8d99-e6f384a8adbf/audit [200 OK, 1.62kB, 93ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Audit log has member addition
+
+Γûí 5. Tasks & Duty Lifecycle
+Γöö 5.1 Dispatch Tactical Task
+  POST http://localhost:8082/api/v1/tasks [201 Created, 840B, 112ms]
+  ΓêÜ  Status code is 201 Created
+  ΓêÜ  Task ID generated
+
+Γöö 5.2 Get Tasks for Team
+  GET http://localhost:8082/api/v1/tasks?teamId=6881c2dd-237b-474e-8d99-e6f384a8adbf [200 OK, 837B, 40ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Contains dispatched task
+
+Γöö 5.3 Get Task Details by ID
+  GET http://localhost:8082/api/v1/tasks/8e27d565-8374-4b7c-85ca-5b26d1d7a268 [200 OK, 835B, 44ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Action type matches
+
+Γöö 5.4 Assign Officer to Task
+  POST http://localhost:8082/api/v1/assignments/tasks/8e27d565-8374-4b7c-85ca-5b26d1d7a268/assign [201 Created, 966B, 50ms]
+  ΓêÜ  Status code is 201 Created
+  ΓêÜ  Assignment created with ASSIGNED status
+
+Γöö 5.5 Get Assignments by Task
+  GET http://localhost:8082/api/v1/assignments/tasks/8e27d565-8374-4b7c-85ca-5b26d1d7a268 [200 OK, 957B, 26ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Returns assignments list
+
+Γöö 5.6 Officer Starts Duty (IN_PROGRESS)
+  POST http://localhost:8082/api/v1/assignments/3a10e8ab-4bd1-4351-9a86-14e783697a61/start [200 OK, 989B, 33ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Status is now IN_PROGRESS
+
+Γöö 5.7 Officer Submits Field Completion Report
+  POST http://localhost:8082/api/v1/assignments/3a10e8ab-4bd1-4351-9a86-14e783697a61/submit [200 OK, 1.11kB, 37ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Status is now SUBMITTED
+
+Γöö 5.8 Lead / Supervisor Approves Completion
+  POST http://localhost:8082/api/v1/assignments/3a10e8ab-4bd1-4351-9a86-14e783697a61/approve [200 OK, 1.17kB, 36ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Status is now COMPLETED
+
+Γûí 6. Tactical Operations & Approvals
+Γöö 6.1 Create Multi-Team Bandobast Operation
+  POST http://localhost:8082/api/v1/operations [201 Created, 983B, 86ms]
+  ΓêÜ  Status code is 201 Created
+  ΓêÜ  Operation created
+
+Γöö 6.2 Supervisor Views Cross-Team Approval Requests
+  GET http://localhost:8082/api/v1/operations/approval-requests [200 OK, 2.22kB, 29ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Approval requests list returned
+
+Γöö 6.3 Supervisor Authorizes Joint Operation Request
+  POST http://localhost:8082/api/v1/operations/approval-requests/2b3a1413-8bc7-4661-8941-3af4c93c119b/approve [200 OK, 1.06kB, 45ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Approval state is APPROVED
+
+Γöö 6.4 Schedule Operation Timeline
+  PUT http://localhost:8082/api/v1/operations/41c39f43-d780-4483-9817-d7ff73d0f1c5/schedule [200 OK, 1.01kB, 81ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Schedule updated
+
+Γöö 6.5 Change Operation Status to ACTIVE
+  PATCH http://localhost:8082/api/v1/operations/41c39f43-d780-4483-9817-d7ff73d0f1c5/status [200 OK, 1.04kB, 104ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Status is ACTIVE
+
+Γöö 6.6 Add Operation Location Checkpoint (Supervisor Authority)
+  POST http://localhost:8082/api/v1/operations/41c39f43-d780-4483-9817-d7ff73d0f1c5/locations [201 Created, 782B, 35ms]
+  ΓêÜ  Status code is 201 Created
+
+Γöö 6.7 List Operation Locations
+  GET http://localhost:8082/api/v1/operations/41c39f43-d780-4483-9817-d7ff73d0f1c5/locations [200 OK, 773B, 27ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Locations list returned
+
+Γöö 6.8 Get Operation Location Detail
+  GET http://localhost:8082/api/v1/operations/locations/b8cebb22-1df9-41ed-8b49-33b60d7aba1d [200 OK, 771B, 22ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Name matches checkpoint
+
+Γöö 6.9 Get Operation by ID
+  GET http://localhost:8082/api/v1/operations/41c39f43-d780-4483-9817-d7ff73d0f1c5 [200 OK, 1.03kB, 40ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Type matches BANDOBAST
+
+Γöö 6.10 Get All Operations
+  GET http://localhost:8082/api/v1/operations [200 OK, 1.03kB, 60ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Operations array returned
+
+Γöö 6.11 Get Operation Audit Trail
+  GET http://localhost:8082/api/v1/operations/41c39f43-d780-4483-9817-d7ff73d0f1c5/audit-history [200 OK, 2.92kB, 22ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Audit history returned
+
+Γûí 7. GPS Telemetry & Tracking
+Γöö 7.1 Ingest Live 20-Second Officer GPS Fix
+  POST http://localhost:8082/api/v1/tracking/update [201 Created, 748B, 27ms]
+  ΓêÜ  Status code is 201 Created
+  ΓêÜ  Telemetry recorded with Freshness
+
+Γöö 7.2 Get Live Officer Locations for Team
+  GET http://localhost:8082/api/v1/tracking/teams/6881c2dd-237b-474e-8d99-e6f384a8adbf/live [200 OK, 733B, 42ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Returns live telemetry array
+  ΓêÜ  Contains recorded fix
+
+Γöö 7.3 Get Officer Latest Location
+  GET http://localhost:8082/api/v1/tracking/officers/dcd3cb4f-ee31-44ee-96d9-f00e43775472/latest [200 OK, 731B, 29ms]
+  ΓêÜ  Status code is 200 OK
+  ΓêÜ  Coordinates match telemetry fix
+
+Γûí 8. Teardown & Edge Cases
+Γöö 8.1 Delete Operation Checkpoint Location (Audit Retention Rule)
+  DELETE http://localhost:8082/api/v1/operations/locations/b8cebb22-1df9-41ed-8b49-33b60d7aba1d [409 Conflict, 644B, 35ms]
+  ΓêÜ  Status code is 409 Conflict (Audit Retention Enforced) or 204
+  ΓêÜ  Audit retention rule verified
+
+Γöö 8.2 Remove Officer from Team
+  DELETE http://localhost:8082/api/v1/teams/6881c2dd-237b-474e-8d99-e6f384a8adbf/members/dcd3cb4f-ee31-44ee-96d9-f00e43775472?remarks=AssignmentCycleComplete [204 No Content, 371B, 36ms]
+  ΓêÜ  Status code is 204 No Content or 200
+
+Γöö 8.3 Logout Officer Session
+  POST http://localhost:8082/api/v1/auth/logout [204 No Content, 430B, 37ms]
+  ΓêÜ  Status code is 204 No Content or 200
+
+ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+Γöé                         Γöé          executed Γöé            failed Γöé
+Γö£ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöñ
+Γöé              iterations Γöé                 1 Γöé                 0 Γöé
+Γö£ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöñ
+Γöé                requests Γöé                45 Γöé                 0 Γöé
+Γö£ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöñ
+Γöé            test-scripts Γöé                45 Γöé                 0 Γöé
+Γö£ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöñ
+Γöé      prerequest-scripts Γöé                 0 Γöé                 0 Γöé
+Γö£ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöñ
+Γöé              assertions Γöé                82 Γöé                 0 Γöé
+Γö£ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö┤ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö┤ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöñ
+Γöé total run duration: 6.8s                                        Γöé
+Γö£ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöñ
+Γöé total data received: 37.78kB (approx)                           Γöé
+Γö£ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöñ
+Γöé average response time: 75ms [min: 18ms, max: 590ms, s.d.: 91ms] Γöé
+ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ

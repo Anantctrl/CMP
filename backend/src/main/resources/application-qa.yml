@@ -11,20 +11,9 @@ spring:
       port: ${REDIS_PORT:6379}
       timeout: 2000ms
   datasource:
-    jdbc-url: jdbc:mysql://localhost:3306/auth_app_yt
+    jdbc-url: ${MYSQL_URL:jdbc:mysql://localhost:3306/auth_app_yt}
     username: ${MYSQL_USER:root}
-    password: ${MYSQL_PASSWORD}
-
-  #    hikari:
-  #      pool-name: HikariCP
-  #      maximum-pool-size: 5
-  #      connection-timeout: 10000
-  #      idle-timeout: 600000
-
-  #      max-lifetime: 1800000
-  #      validation-timeout: 1800000
-  #      leak-detection-threshold: 0
-  #      initialization-fail-timeout: -1
+    password: ${MYSQL_PASSWORD:mysql}
 
   jpa:
     hibernate:
@@ -43,7 +32,6 @@ spring:
             client-id: ${GOOGLE_CLIENT_ID:test-client-id}
             client-secret: ${GOOGLE_CLIENT_SECRET:test-client-secret}
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-            #/login/oauth2/code/google
             scope:
               - email
               - profile
@@ -52,23 +40,13 @@ spring:
             client-id: ${GITHUB_CLIENT_ID:test-client-id}
             client-secret: ${GITHUB_CLIENT_SECRET:test-client-secret}
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-            #/login/oauth2/code/github
             scope:
               - user:email
               - read:user
 
-
-
-
-
-
-#    jpa and hibernate configurations
-
-
 logging:
   level:
     org.springframework.security: DEBUG
-
 
 security:
   jwt:
@@ -82,17 +60,16 @@ security:
     cookie-same-site: ${JWT_COOKIE_SAME_SITE:lax}
     cookie-domain: ${JWT_COOKIE_DOMAIN:}
 
-
 app:
   cors:
-    front-end-url: ${FRONT_END_URL:http://localhost:5173}
+    front-end-url: ${FRONT_END_URL:http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000}
   auth:
     frontend:
       success-redirect: ${FRONT_END_SUCCESS_REDIRECT:http://localhost:5173/oauth/success}
       failure-redirect: ${FRONT_END_FAILURE_REDIRECT:http://localhost:5173/oauth/failure}
   datasource:
     postgres:
-      jdbc-url: jdbc:postgresql://localhost:5432/copmap
+      jdbc-url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/copmap}
       username: ${POSTGRES_USER:copmap_app}
-      password: ${POSTGRES_PASSWORD}
+      password: ${POSTGRES_PASSWORD:}
       driver-class-name: org.postgresql.Driver

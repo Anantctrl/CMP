@@ -162,25 +162,21 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource(
             @Value("${app.cors.front-end-url}") String corsUrls
     ) {
-
-        String[] urls = corsUrls.trim().split(",");
+        List<String> origins = Arrays.stream(corsUrls.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
 
         var config = new CorsConfiguration();
-
-        config.setAllowedOrigins(Arrays.asList(urls));
-
+        config.setAllowedOrigins(origins);
         config.setAllowedMethods(
                 List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD")
         );
-
         config.setAllowedHeaders(List.of("*"));
-
         config.setAllowCredentials(true);
 
         var source = new UrlBasedCorsConfigurationSource();
-
         source.registerCorsConfiguration("/**", config);
-
         return source;
     }
 }

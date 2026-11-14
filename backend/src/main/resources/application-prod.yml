@@ -1,34 +1,31 @@
-#development version of configurations
+# Production Configuration
 server:
-  port: 8080
+  port: ${PORT:8080}
+  address: 0.0.0.0
 
-#  database connections
 spring:
-  datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
 
-  #    hikari:
-  #      pool-name: HikariCP
-  #      maximum-pool-size: 5
-  #      connection-timeout: 10000
-  #      idle-timeout: 600000
-  #      max-lifetime: 1800000
-  #      validation-timeout: 1800000
-  #      leak-detection-threshold: 0
-  #      initialization-fail-timeout: -1
+  datasource:
+    jdbc-url: ${MYSQL_URL:${DB_URL:jdbc:mysql://localhost:3306/auth_app_yt}}
+    username: ${MYSQL_USER:${DB_USERNAME:root}}
+    password: ${MYSQL_PASSWORD:${DB_PASSWORD}}
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: false
-    show-sql: true
+    show-sql: false
+
   security:
-    #    oauth2 configurations
     oauth2:
       client:
         registration:
@@ -36,7 +33,6 @@ spring:
             client-id: ${GOOGLE_CLIENT_ID:test-client-id}
             client-secret: ${GOOGLE_CLIENT_SECRET:test-client-secret}
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-            #/login/oauth2/code/google
             scope:
               - email
               - profile
@@ -45,22 +41,15 @@ spring:
             client-id: ${GITHUB_CLIENT_ID:test-client-id}
             client-secret: ${GITHUB_CLIENT_SECRET:test-client-secret}
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-            #/login/oauth2/code/github
             scope:
               - user:email
               - read:user
 
-
-
-
-
-
-#    jpa and hibernate configurations
-
-
-
-
-
+logging:
+  level:
+    root: INFO
+    org.hibernate.SQL: WARN
+    org.springframework.security: WARN
 
 security:
   jwt:
@@ -72,8 +61,7 @@ security:
     cookie-secure: ${JWT_COOKIE_SECURE:true}
     cookie-http-only: ${JWT_COOKIE_HTTP_ONLY:true}
     cookie-same-site: ${JWT_COOKIE_SAME_SITE:lax}
-    cookie-domain: ${JWT_COOKIE_DOMAIN:localhost}
-
+    cookie-domain: ${JWT_COOKIE_DOMAIN:}
 
 app:
   cors:
@@ -82,3 +70,9 @@ app:
     frontend:
       success-redirect: ${FRONT_END_SUCCESS_REDIRECT:http://localhost:5173/oauth/success}
       failure-redirect: ${FRONT_END_FAILURE_REDIRECT:http://localhost:5173/oauth/failure}
+  datasource:
+    postgres:
+      jdbc-url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/copmap}
+      username: ${POSTGRES_USER:copmap_app}
+      password: ${POSTGRES_PASSWORD}
+      driver-class-name: org.postgresql.Driver

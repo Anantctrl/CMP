@@ -16,9 +16,9 @@ public class AuthBackend implements CommandLineRunner {
 
     private final RoleRepository roleRepository;
 
-	public static void main(String[] args) {
-		SpringApplication.run(AuthBackend.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(AuthBackend.class, args);
+    }
 
     @Override
     public void run(String... args) {
@@ -35,6 +35,20 @@ public class AuthBackend implements CommandLineRunner {
                             System.out.println(
                                     "Created default role: " + AppConstants.DEFAULT_ROLE
                             );
+                        }
+                );
+
+        roleRepository.findByName("Supervisor")
+                .ifPresentOrElse(
+                        role -> System.out.println(
+                                "Supervisor role already exists: " + role.getName()
+                        ),
+                        () -> {
+                            Role role = new Role();
+                            role.setId(UUID.randomUUID());
+                            role.setName("Supervisor");
+                            roleRepository.save(role);
+                            System.out.println("Created Supervisor role");
                         }
                 );
     }

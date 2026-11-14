@@ -1,4 +1,3 @@
-
 package com.substring.auth.app.auth.config;
 
 import com.substring.auth.app.auth.services.impl.JwtService;
@@ -48,8 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String header = request.getHeader("Authorization");
 
-        logger.info("Authorization header : {}", header);
-
+        // Note: Do NOT log the raw Authorization header to avoid token leakage in logs
         if (header != null && header.startsWith("Bearer ")) {
 
             String token = header.substring(7);
@@ -108,15 +106,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             } catch (ExpiredJwtException e) {
 
-                logger.warn("JWT token expired");
+                logger.warn("JWT token expired for URI: {}", request.getRequestURI());
 
             } catch (JwtException | IllegalArgumentException e) {
 
-                logger.warn("Invalid JWT token: {}", e.getMessage());
+                logger.warn("Invalid JWT token for URI: {}", request.getRequestURI());
 
             } catch (Exception e) {
 
-                logger.error("JWT authentication failed", e);
+                logger.error("JWT authentication failed for URI: {}", request.getRequestURI(), e);
             }
         }
 

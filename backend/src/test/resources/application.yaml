@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: auth-app-backend-test
+  profiles:
+    active: qa
+  datasource:
+    jdbc-url: ${MYSQL_URL:jdbc:mysql://localhost:3306/auth_app_yt}
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:mysql}
+
+app:
+  datasource:
+    postgres:
+      jdbc-url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/copmap}
+      username: ${POSTGRES_USER:copmap_app}
+      password: ${POSTGRES_PASSWORD:}
+      driver-class-name: org.postgresql.Driver

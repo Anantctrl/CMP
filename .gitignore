@@ -47,12 +47,9 @@ src/main/resources/application-dev.yml
 src/main/resources/application-local.yml
 
 # --- Local documentation / API scratch (kept on disk, not published) ---
-README.md
 frontend/README.md
 backend/src/main/java/com/substring/auth/app/auth/postman/
 backend/src/main/java/com/substring/auth/app/auth/.postman/
 
 # --- Local documentation / API test artifacts (kept on disk, not published) ---
 docs/
-*.postman_collection.json
-*.postman_environment.json

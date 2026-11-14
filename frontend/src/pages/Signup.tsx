@@ -3,12 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { Mail, Lock, User, BadgeCheck } from "lucide-react";
+import { Mail, Lock, User, BadgeCheck, ShieldAlert, Shield } from "lucide-react";
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import toast from "react-hot-toast";
 import type RegisterData from "@/models/RegisterData";
 import { registerUser } from "@/services/AuthService";
-import { useNavigate } from "react-router";
+import { useNavigate, NavLink } from "react-router";
 
 function Signup() {
   const [data, setData] = useState<RegisterData>({
@@ -16,14 +16,23 @@ function Signup() {
     email: "",
     password: "",
     policePost: "",
+    supervisor: false,
   });
 
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     setData((value) => ({
       ...value,
       [event.target.name]: event.target.value,
+    }));
+  };
+
+  const handleCheckboxChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setData((value) => ({
+      ...value,
+      supervisor: event.target.checked,
     }));
   };
 
@@ -51,61 +60,63 @@ function Signup() {
     }
 
     try {
+      setLoading(true);
       await registerUser(data);
-      toast.success("User register successfully...");
+      toast.success(
+        data.supervisor
+          ? "Supervisor account registered successfully!"
+          : "User registered successfully!"
+      );
       setData({
         name: "",
         email: "",
         password: "",
         policePost: "",
+        supervisor: false,
       });
       navigate("/login");
     } catch {
       toast.error("Error in registering the user...");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background text-foreground px-4 py-10">
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-background text-foreground px-4 py-8 sm:py-12">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="w-full max-w-md"
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md mx-auto"
       >
-        <Card className="bg-card/70 backdrop-blur-xl border-border shadow-2xl rounded-2xl p-6">
-          <CardContent>
-            {/* Heading */}
-            <motion.h1
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="text-4xl font-bold text-center"
-            >
-              Create Your Account
-            </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="text-center text-muted-foreground mt-2"
-            >
-              Join the next-generation authentication platform
-            </motion.p>
+        <Card className="bg-card/80 backdrop-blur-xl border-border shadow-xl rounded-2xl p-4 sm:p-6">
+          <CardContent className="p-2 sm:p-4 space-y-6">
+            {/* Header */}
+            <div className="text-center space-y-2">
+              <div className="mx-auto w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-2 shadow-sm">
+                <Shield className="w-6 h-6" />
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                Create Account
+              </h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Join the tactical operational command roster
+              </p>
+            </div>
 
             {/* Form */}
-            <form onSubmit={handleFormSubmit} className="mt-8 space-y-6">
+            <form onSubmit={handleFormSubmit} className="space-y-4">
               {/* Name */}
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="name" className="text-xs sm:text-sm font-semibold">Full Name</Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     id="name"
                     type="text"
-                    placeholder="John Doe"
-                    className="pl-10"
+                    placeholder="Inspector John Stone"
+                    className="pl-9 h-11 rounded-xl text-sm"
                     name="name"
                     value={data.name}
                     onChange={handleInputChange}
@@ -114,16 +125,17 @@ function Signup() {
               </div>
 
               {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs sm:text-sm font-semibold">Official Email</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
-                    placeholder="you@example.com"
-                    className="pl-10"
+                    placeholder="john.stone@police.gov"
+                    className="pl-9 h-11 rounded-xl text-sm"
                     name="email"
+                    autoComplete="email"
                     value={data.email}
                     onChange={handleInputChange}
                   />
@@ -131,32 +143,33 @@ function Signup() {
               </div>
 
               {/* Password */}
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-xs sm:text-sm font-semibold">Password</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     id="password"
                     type="password"
                     placeholder="••••••••"
-                    className="pl-10"
+                    className="pl-9 h-11 rounded-xl text-sm"
                     name="password"
+                    autoComplete="new-password"
                     value={data.password}
                     onChange={handleInputChange}
                   />
                 </div>
               </div>
 
-              {/* UI feature 1: officer designation */}
-              <div className="space-y-2">
-                <Label htmlFor="policePost">Designation</Label>
+              {/* Designation */}
+              <div className="space-y-1.5">
+                <Label htmlFor="policePost" className="text-xs sm:text-sm font-semibold">Police Post / Designation</Label>
                 <div className="relative">
-                  <BadgeCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <BadgeCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     id="policePost"
                     type="text"
-                    placeholder="Sub Inspector"
-                    className="pl-10"
+                    placeholder="e.g. Sub Inspector, Inspector, DGP"
+                    className="pl-9 h-11 rounded-xl text-sm"
                     name="policePost"
                     value={data.policePost}
                     onChange={handleInputChange}
@@ -165,10 +178,44 @@ function Signup() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full rounded-2xl text-lg">
-                Sign Up
+              {/* Supervisor Privilege Checkbox */}
+              <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-xl border border-border/80 cursor-pointer">
+                <input
+                  id="supervisor"
+                  type="checkbox"
+                  name="supervisor"
+                  checked={data.supervisor || false}
+                  onChange={handleCheckboxChange}
+                  className="w-4 h-4 mt-0.5 rounded border-border text-primary focus:ring-primary cursor-pointer shrink-0"
+                />
+                <div className="flex flex-col select-none" onClick={() => setData(v => ({ ...v, supervisor: !v.supervisor }))}>
+                  <Label htmlFor="supervisor" className="text-xs sm:text-sm font-bold cursor-pointer flex items-center gap-1.5">
+                    <ShieldAlert className="w-3.5 h-3.5 text-primary shrink-0" />
+                    Register as Supervisor
+                  </Label>
+                  <span className="text-[11px] sm:text-xs text-muted-foreground leading-snug mt-0.5">
+                    Grants command-level authority, team creation, and operation approvals
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full h-11 sm:h-12 rounded-xl text-sm sm:text-base font-semibold shadow-md shadow-primary/20 mt-2"
+              >
+                {loading ? "Registering..." : "Create Account"}
               </Button>
             </form>
+
+            <div className="text-center pt-2 border-t border-border/60">
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Already registered?{" "}
+                <NavLink to="/login" className="text-primary font-semibold hover:underline">
+                  Sign in here
+                </NavLink>
+              </p>
+            </div>
           </CardContent>
         </Card>
       </motion.div>

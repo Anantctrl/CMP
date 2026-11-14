@@ -14,6 +14,7 @@ import com.substring.auth.app.officer.entity.OfficerProfile;
 import com.substring.auth.app.officer.repository.OfficerProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,7 @@ public class UserServiceImpl implements UserService {
     private final ModelMapper modelMapper;
     private final RoleRepository roleRepository;
     private final OfficerProfileRepository officerRepository;
+    private final CacheManager cacheManager;
 
     @Override
     @Transactional(transactionManager = "mysqlTransactionManager")
@@ -71,19 +73,28 @@ public class UserServiceImpl implements UserService {
 
         User savedUser = userRepository.save(user);
 
-        // Auto-provision OfficerProfile in PostgreSQL for immediate operational readiness
+        // Auto-provision & sync OfficerProfile in PostgreSQL and evict Redis cache
         try {
-            if (officerRepository.findByMysqlUserId(savedUser.getId()).isEmpty()) {
-                OfficerProfile officerProfile = new OfficerProfile();
-                officerProfile.setMysqlUserId(savedUser.getId());
-                String desig = (savedUser.getPolicePost() != null && !savedUser.getPolicePost().isBlank())
-                        ? savedUser.getPolicePost().trim()
-                        : "Officer";
-                officerProfile.setDesignation(desig);
-                officerRepository.save(officerProfile);
+            OfficerProfile profile = officerRepository.findByMysqlUserId(savedUser.getId())
+                    .orElseGet(() -> {
+                        OfficerProfile op = new OfficerProfile();
+                        op.setMysqlUserId(savedUser.getId());
+                        return op;
+                    });
+            String desig = (savedUser.getPolicePost() != null && !savedUser.getPolicePost().isBlank())
+                    ? savedUser.getPolicePost().trim()
+                    : "Officer";
+            profile.setDesignation(desig);
+            profile.setOfficerName(savedUser.getName() != null && !savedUser.getName().isBlank()
+                    ? savedUser.getName()
+                    : "Officer");
+            officerRepository.save(profile);
+
+            if (cacheManager != null && cacheManager.getCache("officers_directory") != null) {
+                cacheManager.getCache("officers_directory").clear();
             }
         } catch (Exception ignored) {
-            // Logged or handled gracefully; CurrentOfficerService also has fallback provisioning
+            // Handled gracefully
         }
 
         return modelMapper.map(savedUser, UserDto.class);
