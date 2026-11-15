@@ -1,7 +1,6 @@
 package com.copmap.auth.services.impl;
 
 import com.copmap.auth.config.AppConstants;
-import com.copmap.auth.entities.Provider;
 import com.copmap.auth.entities.Role;
 import com.copmap.auth.entities.User;
 import com.copmap.auth.helpers.UserHelper;
@@ -48,12 +47,6 @@ public class UserServiceImpl implements UserService {
         }
 
         User user = modelMapper.map(userDto, User.class);
-
-        user.setProvider(
-                userDto.getProvider() != null
-                        ? userDto.getProvider()
-                        : Provider.LOCAL
-        );
 
         if (user.getPolicePost() == null || user.getPolicePost().isBlank()) {
             user.setPolicePost("General Duty");

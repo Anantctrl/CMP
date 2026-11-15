@@ -33,8 +33,6 @@ public class User implements UserDetails {
 
     private String password;
 
-    private String image;
-
     @Column(name = "enabled", nullable = false)
     @Builder.Default
     private boolean enable = true;
@@ -44,12 +42,6 @@ public class User implements UserDetails {
 
     @Builder.Default
     private Instant updatedAt = Instant.now();
-
-    @Enumerated(EnumType.STRING)
-    @Builder.Default
-    private Provider provider = Provider.LOCAL;
-
-    private String providerId;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", nullable = false)

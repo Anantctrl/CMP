@@ -1,4 +1,20 @@
 services:
+
+  # frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: copmap-frontend:latest
+    container_name: copmap-frontend
+    ports:
+      - "3000:80"
+    networks:
+      - copmap-net
+    depends_on:
+      - api
+    restart: unless-stopped
+
   # MySQL - CopMap Authentication & Identity Store
   mysql:
     image: mysql:8.4
@@ -7,7 +23,7 @@ services:
       MYSQL_DATABASE: copmap_auth
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-mysql}
     ports:
-      - "127.0.0.1:3306:3306"
+      - "127.0.0.1:3307:3306"
     networks:
       - copmap-net
     volumes:
@@ -46,7 +62,6 @@ services:
   # Redis - CopMap Telemetry & Directory Cache
   redis:
     image: redis:7-alpine
-    container_name: copmap-redis
     ports:
       - "127.0.0.1:6379:6379"
     networks:
@@ -80,9 +95,9 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      JWT_SECRET: ${JWT_SECRET:-ekqSbKMKgO507t7QvNUz7tXRmlv/eo0YZUkwpFXYKkcsIgJ2e0VsVeelnzX+oUho}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in your .env file}
       JWT_ISSUER: ${JWT_ISSUER:-api.copmap.gov}
-      FRONT_END_URL: ${FRONT_END_URL:-http://localhost:5173}
+      FRONT_END_URL: ${FRONT_END_URL:-http://localhost:3000}
     ports:
       - "8082:8082"
     networks:

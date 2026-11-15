@@ -24,6 +24,8 @@ logs/
 *.zip
 *.dump
 *.sql.gz
+copmap_auth_backup.sql
+*.backup.sql
 
 # --- IDE / editor ---
 .idea/
