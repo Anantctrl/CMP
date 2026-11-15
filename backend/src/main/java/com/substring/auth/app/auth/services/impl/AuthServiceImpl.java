@@ -27,9 +27,9 @@ public class AuthServiceImpl implements AuthService {
                 passwordEncoder.encode(userDto.getPassword())
         );
 
-        // Honor supervisor flag from registration checkbox
-        boolean isSupervisor = Boolean.TRUE.equals(userDto.getSupervisor());
-        userDto.setSupervisor(isSupervisor);
+        // Security boundary: Public self-registration must NEVER grant elevated Supervisor privileges.
+        // All public registrations are strictly assigned the default unprivileged role.
+        userDto.setSupervisor(false);
         userDto.setRole(null);
 
         return userService.createUser(userDto);

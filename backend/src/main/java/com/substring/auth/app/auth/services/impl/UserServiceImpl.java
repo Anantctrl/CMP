@@ -14,7 +14,12 @@ import com.substring.auth.app.officer.entity.OfficerProfile;
 import com.substring.auth.app.officer.repository.OfficerProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +28,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
+
+    private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
 
     private final UserRepository userRepository;
     private final ModelMapper modelMapper;
@@ -48,17 +55,33 @@ public class UserServiceImpl implements UserService {
                         : Provider.LOCAL
         );
 
+        if (user.getPolicePost() == null || user.getPolicePost().isBlank()) {
+            user.setPolicePost("General Duty");
+        }
+
         boolean isSupervisorRequested = Boolean.TRUE.equals(userDto.getSupervisor())
                 || (userDto.getRole() != null && "Supervisor".equalsIgnoreCase(userDto.getRole().getName()));
 
         if (isSupervisorRequested) {
-            Role supervisorRole = roleRepository.findByName("Supervisor")
-                    .orElseGet(() -> {
-                        Role r = new Role();
-                        r.setName("Supervisor");
-                        return roleRepository.save(r);
-                    });
-            user.setRole(supervisorRole);
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            boolean isAuthorizedCaller = auth != null && auth.isAuthenticated() && auth.getAuthorities().stream()
+                    .anyMatch(a -> "Supervisor".equalsIgnoreCase(a.getAuthority())
+                            || "ROLE_Supervisor".equalsIgnoreCase(a.getAuthority())
+                            || "Administrator".equalsIgnoreCase(a.getAuthority())
+                            || "ROLE_Administrator".equalsIgnoreCase(a.getAuthority()));
+
+            if (isAuthorizedCaller || auth == null || !auth.isAuthenticated()) {
+                Role supervisorRole = roleRepository.findByName("Supervisor")
+                        .orElseGet(() -> {
+                            Role r = new Role();
+                            r.setName("Supervisor");
+                            return roleRepository.save(r);
+                        });
+                user.setRole(supervisorRole);
+            } else {
+                log.warn("[RBAC VIOLATION] Attempt by non-supervisor caller to provision Supervisor account for email: {}", userDto.getEmail());
+                throw new AccessDeniedException("Unauthorized: Only existing Supervisors or Administrators can grant Supervisor privileges");
+            }
         } else {
             Role defaultRole = roleRepository.findByName(AppConstants.DEFAULT_ROLE)
                     .or(() -> roleRepository.findByName("Not Assigned"))
@@ -93,8 +116,9 @@ public class UserServiceImpl implements UserService {
             if (cacheManager != null && cacheManager.getCache("officers_directory") != null) {
                 cacheManager.getCache("officers_directory").clear();
             }
-        } catch (Exception ignored) {
-            // Handled gracefully
+        } catch (Exception e) {
+            log.warn("[CROSS-DB SYNC] Failed to provision/sync OfficerProfile in PostgreSQL for user ID {}: {}",
+                    savedUser.getId(), e.getMessage());
         }
 
         return modelMapper.map(savedUser, UserDto.class);

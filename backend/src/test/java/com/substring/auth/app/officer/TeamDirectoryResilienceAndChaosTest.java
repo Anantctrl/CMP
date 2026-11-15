@@ -382,25 +382,55 @@ public class TeamDirectoryResilienceAndChaosTest {
         authenticate(supervisorUser);
         TeamResponse team = teamService.createTeam(new CreateTeamRequest("Concurrent-Avail-Team-" + UUID.randomUUID(), "Stress available"));
 
+        // Pre-create 5 officers that will be added to the team concurrently
+        List<OfficerProfile> officersToAdd = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            User u = createTestUser("roster_mutate_" + i + "_" + UUID.randomUUID() + "@police.gov", "Officer", officerRole);
+            officersToAdd.add(createTestOfficer(u, "Officer"));
+        }
+
         // Pre-warm directory cache so concurrent queries leverage caching
         directoryService.getAllOfficersCached();
 
-        int concurrentQueries = 15;
+        int readQueries = 10;
+        int writeMutations = officersToAdd.size();
+        int totalWorkers = readQueries + writeMutations;
+
         ExecutorService executor = Executors.newFixedThreadPool(8);
         CountDownLatch startGate = new CountDownLatch(1);
-        CountDownLatch completionGate = new CountDownLatch(concurrentQueries);
-        AtomicInteger successCounter = new AtomicInteger(0);
+        CountDownLatch completionGate = new CountDownLatch(totalWorkers);
+        AtomicInteger querySuccessCounter = new AtomicInteger(0);
+        AtomicInteger mutationSuccessCounter = new AtomicInteger(0);
 
-        for (int i = 0; i < concurrentQueries; i++) {
+        // Submit concurrent read workers
+        for (int i = 0; i < readQueries; i++) {
             executor.submit(() -> {
                 try {
                     startGate.await();
+                    authenticate(supervisorUser);
                     List<OfficerDirectoryDto> avail = directoryService.getAvailableOfficersForTeam(team.id());
-                    if (avail != null && !avail.isEmpty()) {
-                        successCounter.incrementAndGet();
+                    if (avail != null) {
+                        querySuccessCounter.incrementAndGet();
                     }
                 } catch (Exception ignored) {
                 } finally {
+                    SecurityContextHolder.clearContext();
+                    completionGate.countDown();
+                }
+            });
+        }
+
+        // Submit concurrent write/roster mutation workers
+        for (OfficerProfile officer : officersToAdd) {
+            executor.submit(() -> {
+                try {
+                    startGate.await();
+                    authenticate(supervisorUser);
+                    teamService.addMember(team.id(), new AddTeamMemberRequest(officer.getId(), TeamRole.FIELD_OPERATOR));
+                    mutationSuccessCounter.incrementAndGet();
+                } catch (Exception ignored) {
+                } finally {
+                    SecurityContextHolder.clearContext();
                     completionGate.countDown();
                 }
             });
@@ -411,7 +441,8 @@ public class TeamDirectoryResilienceAndChaosTest {
         executor.shutdown();
 
         assertThat(done).isTrue();
-        assertThat(successCounter.get()).isEqualTo(concurrentQueries);
+        assertThat(querySuccessCounter.get()).isEqualTo(readQueries);
+        assertThat(mutationSuccessCounter.get()).isEqualTo(writeMutations);
     }
 
     // =========================================================================

@@ -277,6 +277,37 @@ public class AuthFailureAndSecurityUnitTest {
     }
 
     @Nested
+    @DisplayName("Public Registration Privilege Escalation Defense")
+    class PublicRegistrationSecurityTests {
+
+        @Test
+        @DisplayName("Verify Public Registration Strips Client-Supplied Supervisor Flag and Assigns Default Role")
+        void shouldStripSupervisorFlagOnPublicRegistration() throws Exception {
+            String testEmail = "attacker." + UUID.randomUUID() + "@hostile.io";
+            String registerJson = """
+                {
+                    "email": "%s",
+                    "password": "Password123!",
+                    "name": "Attacker Account",
+                    "policePost": "HQ Dispatch",
+                    "supervisor": true
+                }
+            """.formatted(testEmail);
+
+            mockMvc.perform(post("/api/v1/auth/register")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(registerJson))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.email").value(testEmail));
+
+            // Verify database state: user MUST NOT have Supervisor role
+            User saved = userRepository.findByEmail(testEmail).orElseThrow();
+            assertThat(saved.getRole().getName()).isNotEqualToIgnoringCase("Supervisor");
+            assertThat(saved.getRole().getName()).isIn("Not_Assigned", "NOT_ASSIGNED", "Not Assigned");
+        }
+    }
+
+    @Nested
     @DisplayName("Stateless Session & Filter Validation")
     class StatelessSessionTests {
 

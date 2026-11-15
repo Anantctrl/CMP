@@ -51,5 +51,5 @@ app:
     postgres:
       jdbc-url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/copmap}
       username: ${POSTGRES_USER:copmap_app}
-      password: ${POSTGRES_PASSWORD:}
+      password: ${POSTGRES_PASSWORD:localdev123}
       driver-class-name: org.postgresql.Driver
