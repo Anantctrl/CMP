@@ -592,34 +592,6 @@ docker compose up -d --build
 
 In the repository root, create `.env` from the template:
 
-```bash
-# macOS / Linux
-cp .env.example .env
-
-# Windows PowerShell
-Copy-Item .env.example .env
-```
-
-The default values in `.env` are pre-configured for local development (`qa` profile):
-```env
-# Database Credentials
-MYSQL_ROOT_PASSWORD=mysql
-MYSQL_USER=root
-MYSQL_PASSWORD=mysql
-POSTGRES_USER=copmap_app
-POSTGRES_PASSWORD=localdev123
-
-# Security & JWT
-JWT_SECRET=ekqSbKMKgO507t7QvNUz7tXRmlv/eo0YZUkwpFXYKkcsIgJ2e0VsVeelnzX+oUho
-JWT_ISSUER=api.copmap.gov
-
-# Tactical Frontend
-FRONT_END_URL=http://localhost:5173,http://localhost:3000
-DEV_SEED_PASSWORD=Password@123
-```
-
----
-
 ### 7.4 Step 2: Database & Cache Provisioning (Docker Compose or Native)
 
 #### Option A: Docker Compose Services (Recommended)
