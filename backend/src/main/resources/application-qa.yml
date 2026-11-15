@@ -30,7 +30,7 @@ logging:
 
 security:
   jwt:
-    secret: ${JWT_SECRET}
+    secret: ${JWT_SECRET:ekqSbKMKgO507t7QvNUz7tXRmlv/eo0YZUkwpFXYKkcsIgJ2e0VsVeelnzX+oUho}
     issuer: ${JWT_ISSUER:api.copmap.gov}
     access-ttl-seconds: ${JWT_ACCESS_TTL_SECONDS:86400}
     refresh-ttl-seconds: ${JWT_REFRESH_TTL_SECONDS:86400}

@@ -23,7 +23,7 @@ services:
       MYSQL_DATABASE: copmap_auth
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-mysql}
     ports:
-      - "127.0.0.1:3307:3306"
+      - "127.0.0.1:3306:3306"
     networks:
       - copmap-net
     volumes:
@@ -95,7 +95,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in your .env file}
+      JWT_SECRET: ${JWT_SECRET:-ekqSbKMKgO507t7QvNUz7tXRmlv/eo0YZUkwpFXYKkcsIgJ2e0VsVeelnzX+oUho}
       JWT_ISSUER: ${JWT_ISSUER:-api.copmap.gov}
       FRONT_END_URL: ${FRONT_END_URL:-http://localhost:3000}
     ports:

@@ -30,12 +30,13 @@
 5. [Court-Admissible Tactical PDF Dossier Engine](#5-court-admissible-tactical-pdf-dossier-engine)
 6. [Complete REST API Reference](#6-complete-rest-api-reference)
 7. [Installation & Run Setup Guide](#7-installation--run-setup-guide)
-   - [7.1 System Prerequisites](#71-system-prerequisites)
-   - [7.2 Step 1: Database Provisioning (Docker Compose or Native)](#72-step-1-database-provisioning-docker-compose-or-native)
-   - [7.3 Step 2: Environment Configuration](#73-step-2-environment-configuration)
-   - [7.4 Step 3: Backend Setup & Execution (Port 8082)](#74-step-3-backend-setup--execution-port-8082)
-   - [7.5 Step 4: Frontend Setup & Execution (Port 5173)](#75-step-4-frontend-setup--execution-port-5173)
-   - [7.6 Step 5: Verification & Testing (157 Unit/Integration/Chaos Tests + Newman)](#76-step-5-verification--testing-157-unitintegrationchaos-tests--newman)
+   - [7.1 Fast-Track Quickstart (Full Docker Stack)](#71-fast-track-quickstart-full-docker-stack)
+   - [7.2 System Prerequisites](#72-system-prerequisites)
+   - [7.3 Step 1: Environment Configuration (`.env`)](#73-step-1-environment-configuration-env)
+   - [7.4 Step 2: Database & Cache Provisioning (Docker Compose or Native)](#74-step-2-database--cache-provisioning-docker-compose-or-native)
+   - [7.5 Step 3: Backend Setup & Execution (Port 8082)](#75-step-3-backend-setup--execution-port-8082)
+   - [7.6 Step 4: Frontend Setup & Execution (Port 5173)](#76-step-4-frontend-setup--execution-port-5173)
+   - [7.7 Step 5: Verification & Testing (155 Unit/Integration/Chaos Tests + Newman)](#77-step-5-verification--testing-155-unitintegrationchaos-tests--newman)
 
 ---
 
@@ -556,30 +557,87 @@ CopMap features zero-server-overhead, client-side vector PDF compilation impleme
 
 ## 7. Installation & Run Setup Guide
 
-Follow this guide to run the entire CopMap platform from scratch on Windows or Linux.
+Follow this guide to run the entire CopMap platform from a fresh git clone on Windows, macOS, or Linux.
 
-### 7.1 System Prerequisites
+### 7.1 Fast-Track Quickstart (Full Docker Stack)
+
+If you have Docker & Docker Compose installed, you can clone and launch the entire platform (Databases, Redis, Spring Boot Backend API, and React Frontend) with four commands:
+
+```bash
+git clone https://github.com/Anantctrl/CMP.git
+cd CMP
+cp .env.example .env
+docker compose pull
+docker compose up -d --build
+```
+> **Endpoints**:
+> - **Frontend Web UI**: `http://localhost:3000`
+> - **Backend API**: `http://localhost:8082`
+> - **OpenAPI 3.1 Documentation**: `http://localhost:8082/swagger-ui/index.html`
+
+---
+
+### 7.2 System Prerequisites (For Local / Native Execution)
 - **Java**: OpenJDK 21 or higher (`java -version`)
 - **Node.js**: v20.x or higher with `npm` (`node -v`)
-- **Docker & Docker Compose** (Recommended for zero-friction database setup)  
+- **Docker & Docker Compose** (Recommended for databases & cache)  
   *Or native installations of: MySQL 8.4 on port 3306, PostgreSQL 16 on port 5432, and Redis 7 on port 6379.*
 
 ---
 
-### 7.2 Step 1: Database Provisioning (Docker Compose or Native)
+### 7.3 Step 1: Environment Configuration (`.env`)
 
-#### Option A: One-Command Docker Setup (Recommended)
-From the repository root:
+> [!IMPORTANT]
+> Always initialize `.env` before running Docker Compose or local services. Compose parses the root `.env` during startup.
+
+In the repository root, create `.env` from the template:
+
 ```bash
+# macOS / Linux
+cp .env.example .env
+
+# Windows PowerShell
+Copy-Item .env.example .env
+```
+
+The default values in `.env` are pre-configured for local development (`qa` profile):
+```env
+# Database Credentials
+MYSQL_ROOT_PASSWORD=mysql
+MYSQL_USER=root
+MYSQL_PASSWORD=mysql
+POSTGRES_USER=copmap_app
+POSTGRES_PASSWORD=localdev123
+
+# Security & JWT
+JWT_SECRET=ekqSbKMKgO507t7QvNUz7tXRmlv/eo0YZUkwpFXYKkcsIgJ2e0VsVeelnzX+oUho
+JWT_ISSUER=api.copmap.gov
+
+# Tactical Frontend
+FRONT_END_URL=http://localhost:5173,http://localhost:3000
+DEV_SEED_PASSWORD=Password@123
+```
+
+---
+
+### 7.4 Step 2: Database & Cache Provisioning (Docker Compose or Native)
+
+#### Option A: Docker Compose Services (Recommended)
+From the repository root, pull dependencies and launch the three data stores in detached mode:
+```bash
+docker compose pull
 docker compose up -d mysql postgres redis
 ```
-This automatically initializes:
-- `copmap-mysql` on port `3306` with database `copmap_auth`
-- `copmap-postgres` on port `5432` with database `copmap` (user `copmap_app`)
-- `copmap-redis` on port `6379` with in-memory caching
+This provisions:
+- `copmap-mysql` on host port **`127.0.0.1:3306`** with database `copmap_auth` (initialized via `compose/mysql/init/01-copmap.sql`)
+- `copmap-postgres` on host port **`127.0.0.1:5432`** with database `copmap` (user `copmap_app`)
+- `copmap-redis` on host port **`127.0.0.1:6379`** for directory and live telemetry caching
+
+> [!NOTE]
+> **Host Port Conflicts**: If you already have a native MySQL instance running on host port 3306, you can either stop the local service (`net stop MySQL80` on Windows, or `sudo systemctl stop mysql` on Linux) or map Compose to port 3307 in `compose.yaml` (`"127.0.0.1:3307:3306"`) and set `MYSQL_URL=jdbc:mysql://localhost:3307/copmap_auth` in your backend shell.
 
 #### Option B: Native Services Setup
-If running MySQL, PostgreSQL, and Redis as local services:
+If running databases natively without Docker:
 1. **MySQL 8.4** (Port 3306):
    ```sql
    CREATE DATABASE IF NOT EXISTS copmap_auth;
@@ -597,29 +655,9 @@ If running MySQL, PostgreSQL, and Redis as local services:
 
 ---
 
-### 7.3 Step 2: Environment Configuration
+### 7.5 Step 3: Backend Setup & Execution (Port 8082)
 
-Verify or create the `.env` file in the repository root (`.env`):
-```env
-# Database Credentials
-MYSQL_ROOT_PASSWORD=mysql
-MYSQL_USER=root
-MYSQL_PASSWORD=mysql
-POSTGRES_USER=copmap_app
-POSTGRES_PASSWORD=localdev123
-
-# Security & JWT
-JWT_SECRET=ekqSbKMKgO507t7QvNUz7tXRmlv/eo0YZUkwpFXYKkcsIgJ2e0VsVeelnzX+oUho
-JWT_ISSUER=api.copmap.gov
-
-# Tactical Frontend
-FRONT_END_URL=http://localhost:5173
-DEV_SEED_PASSWORD=Password@123
-```
-
----
-
-### 7.4 Step 3: Backend Setup & Execution (Port 8082)
+Spring Boot reads environment variables from the OS/shell environment (it does not parse `.env` files directly).
 
 1. Navigate to the backend directory:
    ```bash
@@ -636,22 +674,40 @@ DEV_SEED_PASSWORD=Password@123
    ```
 
 3. Launch the Spring Boot application:
-   ```bash
-   # Windows PowerShell / CMD
-   .\mvnw.cmd spring-boot:run
 
-   # macOS / Linux
-   ./mvnw spring-boot:run
-   ```
-   *The backend will boot under active profile `qa`, connect to MySQL (`copmap_auth`), PostgreSQL (`copmap`), and Redis (`6379`), initialize database schemas, and listen on **`http://localhost:8082`**.*
+   - **Windows PowerShell**:
+     ```powershell
+     $env:SPRING_PROFILES_ACTIVE = "qa"
+     $env:JWT_SECRET = "ekqSbKMKgO507t7QvNUz7tXRmlv/eo0YZUkwpFXYKkcsIgJ2e0VsVeelnzX+oUho"
+     .\mvnw.cmd spring-boot:run
+     ```
+     *(Or import all `.env` values directly into your PowerShell session)*:
+     ```powershell
+     Get-Content ..\.env | ForEach-Object { if ($_ -match '^([^#=]+)=(.*)$') { [System.Environment]::SetEnvironmentVariable($matches[1].Trim(), $matches[2].Trim(), 'Process') } }
+     .\mvnw.cmd spring-boot:run
+     ```
+
+   - **macOS / Linux**:
+     ```bash
+     export SPRING_PROFILES_ACTIVE=qa
+     export JWT_SECRET="ekqSbKMKgO507t7QvNUz7tXRmlv/eo0YZUkwpFXYKkcsIgJ2e0VsVeelnzX+oUho"
+     ./mvnw spring-boot:run
+     ```
+     *(Or export all `.env` values directly)*:
+     ```bash
+     export $(grep -v '^#' ../.env | xargs)
+     ./mvnw spring-boot:run
+     ```
+
+   *The backend defaults to active profile `qa` (`application.yaml`), automatically connects to MySQL (`localhost:3306/copmap_auth`), PostgreSQL (`localhost:5432/copmap`), and Redis (`localhost:6379`), initializes schema tables (`ddl-auto: update`), and listens on **`http://localhost:8082`**.*
 
 4. Verify backend health and documentation:
    - OpenAPI UI: **`http://localhost:8082/swagger-ui/index.html`**
-   - API Docs: **`http://localhost:8082/v3/api-docs`**
+   - Raw OpenAPI Specs: **`http://localhost:8082/v3/api-docs`**
 
 ---
 
-### 7.5 Step 4: Frontend Setup & Execution (Port 5173)
+### 7.6 Step 4: Frontend Setup & Execution (Port 5173)
 
 1. In a new terminal, navigate to the frontend directory:
    ```bash
@@ -674,9 +730,9 @@ DEV_SEED_PASSWORD=Password@123
 
 ---
 
-### 7.6 Step 5: Verification & Testing (157 Unit/Integration/Chaos Tests + Newman)
+### 7.7 Step 5: Verification & Testing (155 Unit/Integration/Chaos Tests + Newman)
 
-#### 1. Execute Full Java Automated Test Suite (157 Tests)
+#### 1. Execute Full Java Automated Test Suite (155 Tests)
 Run the entire suite of unit, integration, multi-database routing, and chaos stress tests:
 ```bash
 cd backend
@@ -691,7 +747,7 @@ cd backend
 ```
 [INFO] Results:
 [INFO] 
-[INFO] Tests run: 157, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 155, Failures: 0, Errors: 0, Skipped: 0
 [INFO] 
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
