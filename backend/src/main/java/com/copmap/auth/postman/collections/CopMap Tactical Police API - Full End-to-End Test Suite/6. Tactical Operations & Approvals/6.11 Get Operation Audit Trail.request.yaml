@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/operations/{{operationId}}/audit-history"
+method: GET
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{supervisorToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () { pm.expect(pm.response.code).to.eql(200); });
+      var json = pm.response.json();
+      pm.test('Audit history returned', function () { pm.expect(Array.isArray(json)).to.be.true; });
+    language: text/javascript
+order: 11000

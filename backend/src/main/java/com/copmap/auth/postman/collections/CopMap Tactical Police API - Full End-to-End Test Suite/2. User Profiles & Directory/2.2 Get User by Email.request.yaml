@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/users/email/officer.test.1794677612@police.gov"
+method: GET
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{supervisorToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () { pm.expect(pm.response.code).to.eql(200); });
+      var json = pm.response.json();
+      pm.test('Email matches registered officer', function () { pm.expect(json.email).to.include('officer.test'); });
+    language: text/javascript
+order: 2000

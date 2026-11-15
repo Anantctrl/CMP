@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/assignments/{{assignmentId}}/start"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{officerToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () { pm.expect(pm.response.code).to.eql(200); });
+      var json = pm.response.json();
+      pm.test('Status is now IN_PROGRESS', function () { pm.expect(json.status).to.eql('IN_PROGRESS'); });
+    language: text/javascript
+order: 6000

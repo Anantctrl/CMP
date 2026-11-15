@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/teams"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{supervisorToken}}
+body:
+  type: json
+  content: |-
+    {
+      "name": "Alpha Tactical QRT - Sector 7612",
+      "description": "High-readiness rapid response unit assigned to central sector."
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 201 Created', function () { pm.expect(pm.response.code).to.eql(201); });
+      var json = pm.response.json();
+      pm.test('Team created with UUID', function () { pm.expect(json.id).to.not.be.empty; });
+      pm.environment.set('teamId', json.id);
+    language: text/javascript
+order: 1000

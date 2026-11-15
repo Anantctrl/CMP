@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/tracking/officers/{{officerId}}/latest"
+method: GET
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{supervisorToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () { pm.expect(pm.response.code).to.eql(200); });
+      var json = pm.response.json();
+      pm.test('Coordinates match telemetry fix', function () { pm.expect(json.latitude).to.be.closeTo(18.598, 0.01); });
+    language: text/javascript
+order: 3000

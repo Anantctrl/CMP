@@ -49,7 +49,7 @@ This document outlines the test strategy, unit test matrices, failure-injection 
 
 | ID | Test Scenario | Test Type | Method / Tool | Expected Behavior & Assertion |
 | :--- | :--- | :--- | :--- | :--- |
-| `CFG-ROUT-01` | **Persistence Unit Boundary Enforcement** | Unit / Integration | Spring Context reflection | Verify `MySqlDatabaseConfig` manages only `com.substring.auth.app.auth.entities` and `PostgresDatabaseConfig` manages only `officer`, `operations`, `team`, and `tracking` entities. |
+| `CFG-ROUT-01` | **Persistence Unit Boundary Enforcement** | Unit / Integration | Spring Context reflection | Verify `MySqlDatabaseConfig` manages only `com.copmap.auth.entities` and `PostgresDatabaseConfig` manages only `officer`, `operations`, `team`, and `tracking` entities. |
 | `CFG-ROUT-02` | **Cross-Database Entity Leakage Prevention** | Integration | MockMvc / Service Test | Attempt to persist an `OfficerProfile` entity via a MySQL repository bean or a `User` entity via PostgreSQL repository. Must fail at compile-time/runtime with `IllegalArgumentException: Not a managed type`. |
 | `CFG-ROUT-03` | **Dual-Transaction Manager Isolation** | Integration | JUnit 5 `@Transactional` | Execute a method annotated with `@Transactional("postgresTransactionManager")`. Induce a rollback in PostgreSQL. Verify PostgreSQL rolls back cleanly while MySQL connection is not affected or held open. |
 | `CFG-ROUT-04` | **Simultaneous Dual-Datasource Read** | Integration | `UserServiceImpl.createUser()` test | Single flow writes to MySQL (`userRepository.save()`) and PostgreSQL (`officerRepository.save()`). Verify both stores reflect the created entity with matching `mysqlUserId`. |

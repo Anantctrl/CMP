@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/operations/{{operationId}}"
+method: GET
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{plannerToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () { pm.expect(pm.response.code).to.eql(200); });
+      var json = pm.response.json();
+      pm.test('Type matches BANDOBAST', function () { pm.expect(json.type).to.eql('BANDOBAST'); });
+    language: text/javascript
+order: 9000

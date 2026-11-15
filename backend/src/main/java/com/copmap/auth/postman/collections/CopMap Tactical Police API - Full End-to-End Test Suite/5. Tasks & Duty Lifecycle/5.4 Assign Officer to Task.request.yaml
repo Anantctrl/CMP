@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/assignments/tasks/{{taskId}}/assign"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{plannerToken}}
+body:
+  type: json
+  content: |-
+    {
+      "officerId": "{{officerId}}",
+      "responsibility": "Lead Interception & Funnel Check",
+      "instructions": "Screen commercial vehicles and verify vehicle registration papers."
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 201 Created', function () { pm.expect(pm.response.code).to.eql(201); });
+      var json = pm.response.json();
+      pm.test('Assignment created with ASSIGNED status', function () { pm.expect(json.status).to.eql('ASSIGNED'); });
+      pm.environment.set('assignmentId', json.id);
+    language: text/javascript
+order: 4000

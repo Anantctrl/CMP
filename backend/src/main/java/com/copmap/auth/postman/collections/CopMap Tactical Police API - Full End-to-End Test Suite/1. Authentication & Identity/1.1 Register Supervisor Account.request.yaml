@@ -1,0 +1,25 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "ACP Rajeshwar Sharma",
+      "email": "supervisor.test.1794677612@police.gov",
+      "password": "Password@123",
+      "policePost": "Central Command Headquarters",
+      "supervisor": true
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 201 Created', function () { pm.expect(pm.response.code).to.eql(201); });
+      var json = pm.response.json();
+      pm.test('Supervisor registered with ID', function () { pm.expect(json.id).to.not.be.empty; });
+      pm.environment.set('supervisorEmail', json.email);
+      pm.environment.set('supervisorMysqlId', json.id);
+    language: text/javascript
+order: 1000

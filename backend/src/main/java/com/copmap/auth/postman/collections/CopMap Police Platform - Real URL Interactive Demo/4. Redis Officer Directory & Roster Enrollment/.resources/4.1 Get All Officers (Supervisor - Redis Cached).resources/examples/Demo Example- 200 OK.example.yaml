@@ -1,0 +1,189 @@
+$kind: http-example
+name: "Demo Example: 200 OK"
+request:
+  url: http://localhost:8082/api/v1/officers
+  method: GET
+  headers:
+    Content-Type: application/json
+    Authorization: "{{bearer_token_0kvv}}"
+    User-Agent: PostmanRuntime/7.39.1
+    Accept: "*/*"
+    Cache-Control: no-cache
+    Postman-Token: 49fc336f-3aac-43b5-bb6a-037f429fbb86
+    Host: localhost:8082
+    Accept-Encoding: gzip, deflate, br
+    Connection: keep-alive
+    Cookie: refreshToken={{json_web_token_190o}}
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    - key: Vary
+      value: Origin
+    - key: Vary
+      value: Access-Control-Request-Method
+    - key: Vary
+      value: Access-Control-Request-Headers
+    - key: X-Content-Type-Options
+      value: nosniff
+    - key: X-XSS-Protection
+      value: "0"
+    - key: Cache-Control
+      value: no-cache, no-store, max-age=0, must-revalidate
+    - key: Pragma
+      value: no-cache
+    - key: Expires
+      value: "0"
+    - key: X-Frame-Options
+      value: DENY
+    - key: Content-Type
+      value: application/json
+    - key: Transfer-Encoding
+      value: chunked
+    - key: Date
+      value: Sat, 14 Nov 2026 17:33:49 GMT
+    - key: Keep-Alive
+      value: timeout=60
+    - key: Connection
+      value: keep-alive
+  body:
+    type: json
+    content: |-
+      [
+        {
+          "officerId": "821085f3-9c85-48b1-acbd-d22143022ed5",
+          "mysqlUserId": "1a38c8f3-7323-48f4-afca-bbf85342feae",
+          "name": "Sub-Inspector Anita Deshmukh",
+          "policePost": "Wakad Police Station",
+          "designation": "Wakad Police Station",
+          "email": "officer.test.1794677367@police.gov",
+          "role": "NOT_ASSIGNED"
+        },
+        {
+          "officerId": "1b76ac90-5faa-4e78-8359-0a409c1c0538",
+          "mysqlUserId": "31a8144c-9265-43cf-8d0b-cae2385071b5",
+          "name": "Sub-Inspector Anita Deshmukh",
+          "policePost": "Wakad Police Station",
+          "designation": "Wakad Police Station",
+          "email": "officer.test.1794676495@police.gov",
+          "role": "NOT_ASSIGNED"
+        },
+        {
+          "officerId": "cef26fd4-54d2-4fc6-8199-7c5bbf1e7692",
+          "mysqlUserId": "4bf59ec9-e1ba-4bab-9078-5275845f6917",
+          "name": "Sr Inspector Vikram Rane",
+          "policePost": "Shivajinagar Police Division",
+          "designation": "Shivajinagar Police Division",
+          "email": "planner.test.1794676495@police.gov",
+          "role": "NOT_ASSIGNED"
+        },
+        {
+          "officerId": "1201dc77-225e-45fb-9e40-7b1ceeb4d4ad",
+          "mysqlUserId": "692bfd99-f310-4034-81ca-590b6b43abac",
+          "name": "Sub-Inspector Anita Deshmukh",
+          "policePost": "Wakad Police Station",
+          "designation": "Wakad Police Station",
+          "email": "officer.test.1794677204@police.gov",
+          "role": "NOT_ASSIGNED"
+        },
+        {
+          "officerId": "0b429e2d-04d5-4d9e-8270-1e8231cb8d62",
+          "mysqlUserId": "7738675e-7c23-4dc5-87b2-41ab286a4741",
+          "name": "ACP Rajeshwar Sharma",
+          "policePost": "Central Command Headquarters",
+          "designation": "Central Command Headquarters",
+          "email": "supervisor.test.1794677204@police.gov",
+          "role": "Supervisor"
+        },
+        {
+          "officerId": "ac7d83fe-f755-4252-8b4b-d041d2d98c55",
+          "mysqlUserId": "84c04491-13e5-45b3-bc85-5c7d0f3daee7",
+          "name": "Sr Inspector Vikram Rane",
+          "policePost": "Shivajinagar Police Division",
+          "designation": "Shivajinagar Police Division",
+          "email": "planner.test.1794677367@police.gov",
+          "role": "NOT_ASSIGNED"
+        },
+        {
+          "officerId": "709be19b-1d53-4c58-96a8-76938b2e2d2c",
+          "mysqlUserId": "903d8ccb-7e98-493a-bc6b-e4da39e6b3e7",
+          "name": "Mike",
+          "policePost": "Sub Inspector",
+          "designation": "Sub Inspector",
+          "email": "seniorplanner@p.gov",
+          "role": "NOT_ASSIGNED"
+        },
+        {
+          "officerId": "9aa7d127-7392-4523-a4cf-fd4900fee4e1",
+          "mysqlUserId": "91c6a525-3d44-4039-b33d-737ac9f7591a",
+          "name": "ACP Rajeshwar Sharma",
+          "policePost": "Central Command Headquarters",
+          "designation": "Central Command Headquarters",
+          "email": "supervisor.test.1794676495@police.gov",
+          "role": "Supervisor"
+        },
+        {
+          "officerId": "2a43104f-4bac-4193-8914-ba87883e1e0c",
+          "mysqlUserId": "9f92cda2-f302-4cc2-a3ed-1ab2a099f3a0",
+          "name": "Sr Inspector Vikram Rane",
+          "policePost": "Shivajinagar Police Division",
+          "designation": "Shivajinagar Police Division",
+          "email": "planner.test.1794677204@police.gov",
+          "role": "NOT_ASSIGNED"
+        },
+        {
+          "officerId": "dcd3cb4f-ee31-44ee-96d9-f00e43775472",
+          "mysqlUserId": "ada401f6-fd64-427b-be1a-644a31dcb8cc",
+          "name": "Sub-Inspector Anita Deshmukh",
+          "policePost": "Wakad Police Station",
+          "designation": "Wakad Police Station",
+          "email": "officer.test.1794677612@police.gov",
+          "role": "NOT_ASSIGNED"
+        },
+        {
+          "officerId": "34f2fa84-ff65-414c-8f8a-96f93c9f9853",
+          "mysqlUserId": "b7ae05af-8964-4351-9376-61c6686c67f7",
+          "name": "Sr Inspector Vikram Rane",
+          "policePost": "Shivajinagar Police Division",
+          "designation": "Shivajinagar Police Division",
+          "email": "planner.test.1794677612@police.gov",
+          "role": "NOT_ASSIGNED"
+        },
+        {
+          "officerId": "77da759a-a55e-4acd-8e1e-4a2a70ba8796",
+          "mysqlUserId": "db5a77d6-c764-4554-ad8d-74fe53ebc7bc",
+          "name": "ACP Rajeshwar Sharma",
+          "policePost": "Central Command Headquarters",
+          "designation": "Central Command Headquarters",
+          "email": "supervisor.test.1794677367@police.gov",
+          "role": "Supervisor"
+        },
+        {
+          "officerId": "3017e466-68e3-452b-bd8c-96c881b8b7cd",
+          "mysqlUserId": "e5d1454f-41fb-420e-a6d8-c5124e7cd6e0",
+          "name": "Anant Gupta",
+          "policePost": "DGP",
+          "designation": "DGP",
+          "email": "anantgggmm@gmail.com",
+          "role": "Supervisor"
+        },
+        {
+          "officerId": "7a1870c9-0f54-4d4a-b389-92801aa27a7d",
+          "mysqlUserId": "ebb4ffd9-2a53-4db7-b49f-f9d7a74a2d14",
+          "name": "Drake",
+          "policePost": "Constable",
+          "designation": "Constable",
+          "email": "constable@p.gov",
+          "role": "NOT_ASSIGNED"
+        },
+        {
+          "officerId": "64175a61-c543-47ca-beca-d264f9acab98",
+          "mysqlUserId": "fc785bd4-075e-4f79-a6a2-1a72405bf3cd",
+          "name": "ACP Rajeshwar Sharma",
+          "policePost": "Central Command Headquarters",
+          "designation": "Central Command Headquarters",
+          "email": "supervisor.test.1794677612@police.gov",
+          "role": "Supervisor"
+        }
+      ]
+order: 1000

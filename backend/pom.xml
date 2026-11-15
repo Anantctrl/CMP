@@ -8,11 +8,11 @@
         <version>3.5.7</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>com.substring.auth</groupId>
-    <artifactId>auth-app-backend</artifactId>
+    <groupId>com.copmap</groupId>
+    <artifactId>copmap-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>auth-app-backend</name>
-    <description>authentication app using spring boot and react</description>
+    <name>copmap-backend</name>
+    <description>CopMap Police Tactical Operational, Real-Time Tracking and Authentication Platform</description>
     <url/>
     <licenses>
         <license/>

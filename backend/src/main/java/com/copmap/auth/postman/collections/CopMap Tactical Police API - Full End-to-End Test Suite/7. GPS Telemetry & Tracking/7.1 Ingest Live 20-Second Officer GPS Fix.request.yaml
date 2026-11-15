@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/tracking/update"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{officerToken}}
+body:
+  type: json
+  content: |-
+    {
+      "latitude": 18.59821,
+      "longitude": 73.76412,
+      "accuracyMeters": 4.5
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 201 Created', function () { pm.expect(pm.response.code).to.eql(201); });
+      var json = pm.response.json();
+      pm.test('Telemetry recorded with Freshness', function () { pm.expect(json.freshnessStatus).to.not.be.empty; });
+    language: text/javascript
+order: 1000

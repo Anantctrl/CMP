@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/tasks/{{taskId}}"
+method: GET
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{plannerToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () { pm.expect(pm.response.code).to.eql(200); });
+      var json = pm.response.json();
+      pm.test('Action type matches', function () { pm.expect(json.actionType).to.eql('NAKABANDI'); });
+    language: text/javascript
+order: 3000

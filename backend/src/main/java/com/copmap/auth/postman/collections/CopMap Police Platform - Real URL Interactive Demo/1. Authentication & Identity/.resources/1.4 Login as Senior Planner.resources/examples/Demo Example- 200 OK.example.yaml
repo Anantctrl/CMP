@@ -1,0 +1,80 @@
+$kind: http-example
+name: "Demo Example: 200 OK"
+request:
+  url: http://localhost:8082/api/v1/auth/login
+  method: POST
+  headers:
+    Content-Type: application/json
+    User-Agent: PostmanRuntime/7.39.1
+    Accept: "*/*"
+    Cache-Control: no-cache
+    Postman-Token: 292ed18e-2a2a-426c-b5c9-206f24006f23
+    Host: localhost:8082
+    Accept-Encoding: gzip, deflate, br
+    Connection: keep-alive
+    Content-Length: "81"
+    Cookie: refreshToken={{json_web_token_0gwt}}
+  body:
+    type: json
+    content: |-
+      {
+        "email": "planner.test.1794677612@police.gov",
+        "password": "Password@123"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    - key: Vary
+      value: Origin
+    - key: Vary
+      value: Access-Control-Request-Method
+    - key: Vary
+      value: Access-Control-Request-Headers
+    - key: Set-Cookie
+      value: refreshToken={{json_web_token_09ux}}; Path=/; Max-Age=86400; Expires=Sun, 15 Nov 2026 17:33:47 GMT; HttpOnly; SameSite=lax
+    - key: Cache-Control
+      value: no-store
+    - key: Pragma
+      value: no-cache
+    - key: X-Content-Type-Options
+      value: nosniff
+    - key: X-XSS-Protection
+      value: "0"
+    - key: X-Frame-Options
+      value: DENY
+    - key: Content-Type
+      value: application/json
+    - key: Transfer-Encoding
+      value: chunked
+    - key: Date
+      value: Sat, 14 Nov 2026 17:33:47 GMT
+    - key: Keep-Alive
+      value: timeout=60
+    - key: Connection
+      value: keep-alive
+  body:
+    type: json
+    content: |-
+      {
+        "accessToken": "{{json_web_token_0y9w}}",
+        "expiresIn": 600,
+        "tokenType": "Bearer",
+        "user": {
+          "policePost": "Shivajinagar Police Division",
+          "id": "b7ae05af-8964-4351-9376-61c6686c67f7",
+          "email": "planner.test.1794677612@police.gov",
+          "name": "Sr Inspector Vikram Rane",
+          "image": null,
+          "enable": true,
+          "createdAt": "2026-11-14T17:33:47.188625Z",
+          "updatedAt": "2026-11-14T17:33:47.319761Z",
+          "provider": "LOCAL",
+          "role": {
+            "id": "e02b29ba-de4e-496d-b480-d5379253e3db",
+            "name": "NOT_ASSIGNED"
+          },
+          "supervisor": null
+        }
+      }
+order: 1000

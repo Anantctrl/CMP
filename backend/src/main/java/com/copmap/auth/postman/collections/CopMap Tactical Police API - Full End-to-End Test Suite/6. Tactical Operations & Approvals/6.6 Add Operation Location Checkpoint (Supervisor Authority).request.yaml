@@ -1,0 +1,26 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/operations/{{operationId}}/locations"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{supervisorToken}}
+body:
+  type: json
+  content: |-
+    {
+      "name": "Perimeter Checkpoint Delta",
+      "description": "Outer vehicle gate & inspection line",
+      "address": "Expressway Junction Sector 3",
+      "latitude": 18.5913,
+      "longitude": 73.7389,
+      "requiredManpower": 8,
+      "sequenceOrder": 1
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 201 Created', function () { pm.expect(pm.response.code).to.eql(201); });
+      var json = pm.response.json();
+      pm.environment.set('locationId', json.id);
+    language: text/javascript
+order: 6000

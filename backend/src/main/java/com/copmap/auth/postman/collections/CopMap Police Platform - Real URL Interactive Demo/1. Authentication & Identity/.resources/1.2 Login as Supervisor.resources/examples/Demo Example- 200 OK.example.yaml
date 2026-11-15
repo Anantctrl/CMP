@@ -1,0 +1,79 @@
+$kind: http-example
+name: "Demo Example: 200 OK"
+request:
+  url: http://localhost:8082/api/v1/auth/login
+  method: POST
+  headers:
+    Content-Type: application/json
+    User-Agent: PostmanRuntime/7.39.1
+    Accept: "*/*"
+    Cache-Control: no-cache
+    Postman-Token: 681d1dd1-a26e-4742-83b9-e5251dcdce5f
+    Host: localhost:8082
+    Accept-Encoding: gzip, deflate, br
+    Connection: keep-alive
+    Content-Length: "84"
+  body:
+    type: json
+    content: |-
+      {
+        "email": "supervisor.test.1794677612@police.gov",
+        "password": "Password@123"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    - key: Vary
+      value: Origin
+    - key: Vary
+      value: Access-Control-Request-Method
+    - key: Vary
+      value: Access-Control-Request-Headers
+    - key: Set-Cookie
+      value: refreshToken={{json_web_token_0gwt}}; Path=/; Max-Age=86400; Expires=Sun, 15 Nov 2026 17:33:47 GMT; HttpOnly; SameSite=lax
+    - key: Cache-Control
+      value: no-store
+    - key: Pragma
+      value: no-cache
+    - key: X-Content-Type-Options
+      value: nosniff
+    - key: X-XSS-Protection
+      value: "0"
+    - key: X-Frame-Options
+      value: DENY
+    - key: Content-Type
+      value: application/json
+    - key: Transfer-Encoding
+      value: chunked
+    - key: Date
+      value: Sat, 14 Nov 2026 17:33:47 GMT
+    - key: Keep-Alive
+      value: timeout=60
+    - key: Connection
+      value: keep-alive
+  body:
+    type: json
+    content: |-
+      {
+        "accessToken": "{{json_web_token_03rj}}",
+        "expiresIn": 600,
+        "tokenType": "Bearer",
+        "user": {
+          "policePost": "Central Command Headquarters",
+          "id": "fc785bd4-075e-4f79-a6a2-1a72405bf3cd",
+          "email": "supervisor.test.1794677612@police.gov",
+          "name": "ACP Rajeshwar Sharma",
+          "image": null,
+          "enable": true,
+          "createdAt": "2026-11-14T17:33:46.361658Z",
+          "updatedAt": "2026-11-14T17:33:46.678884Z",
+          "provider": "LOCAL",
+          "role": {
+            "id": "34000000-0000-0000-0000-000000000000",
+            "name": "Supervisor"
+          },
+          "supervisor": null
+        }
+      }
+order: 1000

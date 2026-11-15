@@ -1,0 +1,15 @@
+$kind: http-request
+url: http://localhost:8082/api/v1/users
+method: GET
+headers:
+  Content-Type: application/json
+  Authorization: "{{bearer_token_0k0t}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () { pm.expect(pm.response.code).to.eql(200); });
+      var json = pm.response.json();
+      pm.test('Returns list of users', function () { pm.expect(Array.isArray(json)).to.be.true; });
+    language: text/javascript
+examples: ./.resources/2.1 Get All Users (Supervisor Authority).resources/examples
+order: 1000

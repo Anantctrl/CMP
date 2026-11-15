@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/officers"
+method: GET
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{supervisorToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () { pm.expect(pm.response.code).to.eql(200); });
+      var json = pm.response.json();
+      pm.test('Officer directory array returned', function () { pm.expect(Array.isArray(json)).to.be.true; });
+      var officer = json.find(o => o.email && o.email.includes(pm.environment.get('runId')) && o.email.includes('officer.test'));
+      if (officer) { pm.environment.set('officerId', officer.officerId); }
+      var planner = json.find(o => o.email && o.email.includes(pm.environment.get('runId')) && o.email.includes('planner.test'));
+      if (planner) { pm.environment.set('plannerOfficerId', planner.officerId); }
+    language: text/javascript
+order: 1000

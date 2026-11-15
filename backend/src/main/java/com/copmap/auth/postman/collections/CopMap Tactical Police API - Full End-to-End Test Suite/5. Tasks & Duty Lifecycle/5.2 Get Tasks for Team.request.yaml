@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/tasks?teamId={{teamId}}"
+method: GET
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{plannerToken}}
+queryParams:
+  teamId: "{{teamId}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () { pm.expect(pm.response.code).to.eql(200); });
+      var json = pm.response.json();
+      pm.test('Contains dispatched task', function () { pm.expect(json.some(t => t.id === pm.environment.get('taskId'))).to.be.true; });
+    language: text/javascript
+order: 2000

@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/teams/{{teamId}}/audit"
+method: GET
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{plannerToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () { pm.expect(pm.response.code).to.eql(200); });
+      var json = pm.response.json();
+      pm.test('Audit log has member addition', function () { pm.expect(json.some(a => a.action === 'MEMBER_ADDED')).to.be.true; });
+    language: text/javascript
+order: 7000

@@ -1,0 +1,27 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/tasks"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{plannerToken}}
+body:
+  type: json
+  content: |-
+    {
+      "teamId": "{{teamId}}",
+      "title": "Arterial Nakabandi Checkpoint 7612",
+      "actionType": "NAKABANDI",
+      "description": "Establish vehicle inspection and tyre-deflator cordon.",
+      "locationName": "Wakad Expressway Toll Plaza",
+      "latitude": 18.5982,
+      "longitude": 73.7641
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 201 Created', function () { pm.expect(pm.response.code).to.eql(201); });
+      var json = pm.response.json();
+      pm.test('Task ID generated', function () { pm.expect(json.id).to.not.be.empty; });
+      pm.environment.set('taskId', json.id);
+    language: text/javascript
+order: 1000

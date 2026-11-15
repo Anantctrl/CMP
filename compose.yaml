@@ -1,11 +1,11 @@
 
 services:
-  # MySQL - Existing authentication project
+  # MySQL - CopMap Authentication & Identity Store
   mysql:
     image: mysql:8.4
-    container_name: auth-mysql
+    container_name: copmap-mysql
     environment:
-      MYSQL_DATABASE: auth_app_yt
+      MYSQL_DATABASE: copmap_auth
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     ports:
       - "127.0.0.1:3306:3306"

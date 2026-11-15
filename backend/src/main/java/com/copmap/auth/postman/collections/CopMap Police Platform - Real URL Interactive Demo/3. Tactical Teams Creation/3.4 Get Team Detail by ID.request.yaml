@@ -1,0 +1,15 @@
+$kind: http-request
+url: http://localhost:8082/api/v1/teams/6881c2dd-237b-474e-8d99-e6f384a8adbf
+method: GET
+headers:
+  Content-Type: application/json
+  Authorization: "{{bearer_token_0k0t}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () { pm.expect(pm.response.code).to.eql(200); });
+      var json = pm.response.json();
+      pm.test('Team ID matches', function () { pm.expect(json.id).to.eql(pm.environment.get('teamId')); });
+    language: text/javascript
+examples: ./.resources/3.4 Get Team Detail by ID.resources/examples
+order: 4000

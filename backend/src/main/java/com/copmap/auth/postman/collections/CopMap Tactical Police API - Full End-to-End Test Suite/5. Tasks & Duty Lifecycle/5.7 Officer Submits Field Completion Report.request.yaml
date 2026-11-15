@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/assignments/{{assignmentId}}/submit"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{officerToken}}
+body:
+  type: json
+  content: |-
+    {
+      "completionReport": "Checkpoint manned from 22:00 to 02:00. 128 vehicles checked, 0 incidents reported. Perimeter secure."
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () { pm.expect(pm.response.code).to.eql(200); });
+      var json = pm.response.json();
+      pm.test('Status is now SUBMITTED', function () { pm.expect(json.status).to.eql('SUBMITTED'); });
+    language: text/javascript
+order: 7000

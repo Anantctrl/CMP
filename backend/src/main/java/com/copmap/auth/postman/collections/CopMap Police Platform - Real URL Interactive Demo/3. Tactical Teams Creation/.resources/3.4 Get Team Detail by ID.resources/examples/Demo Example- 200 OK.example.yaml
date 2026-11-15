@@ -1,0 +1,61 @@
+$kind: http-example
+name: "Demo Example: 200 OK"
+request:
+  url: http://localhost:8082/api/v1/teams/6881c2dd-237b-474e-8d99-e6f384a8adbf
+  method: GET
+  headers:
+    Content-Type: application/json
+    Authorization: "{{bearer_token_0kvv}}"
+    User-Agent: PostmanRuntime/7.39.1
+    Accept: "*/*"
+    Cache-Control: no-cache
+    Postman-Token: 419f1414-4a86-48bc-9ad4-6816c6671577
+    Host: localhost:8082
+    Accept-Encoding: gzip, deflate, br
+    Connection: keep-alive
+    Cookie: refreshToken={{json_web_token_190o}}
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    - key: Vary
+      value: Origin
+    - key: Vary
+      value: Access-Control-Request-Method
+    - key: Vary
+      value: Access-Control-Request-Headers
+    - key: X-Content-Type-Options
+      value: nosniff
+    - key: X-XSS-Protection
+      value: "0"
+    - key: Cache-Control
+      value: no-cache, no-store, max-age=0, must-revalidate
+    - key: Pragma
+      value: no-cache
+    - key: Expires
+      value: "0"
+    - key: X-Frame-Options
+      value: DENY
+    - key: Content-Type
+      value: application/json
+    - key: Transfer-Encoding
+      value: chunked
+    - key: Date
+      value: Sat, 14 Nov 2026 17:33:49 GMT
+    - key: Keep-Alive
+      value: timeout=60
+    - key: Connection
+      value: keep-alive
+  body:
+    type: json
+    content: |-
+      {
+        "id": "6881c2dd-237b-474e-8d99-e6f384a8adbf",
+        "name": "Alpha Tactical QRT - Sector 7612",
+        "description": "High-readiness rapid response unit assigned to central sector.",
+        "createdAt": "2026-11-14T17:33:48.592134Z",
+        "memberCount": 0,
+        "userRoleInTeam": "SUPERVISOR",
+        "activeOperationsCount": 0
+      }
+order: 1000

@@ -70,7 +70,7 @@ Modern law enforcement deployments require instantaneous tactical clarity, tampe
 ```
 
 ### Core Architectural Pillars
-- **Dual-Database Physical Isolation**: Identity credentials (passwords, JWT tokens, account statuses) reside strictly in MySQL (`auth_app_yt`). High-volume law enforcement domain data (teams, operations, geofenced checkpoints, task dispatches, and GPS breadcrumbs) reside in PostgreSQL (`copmap`).
+- **Dual-Database Physical Isolation**: Identity credentials (passwords, JWT tokens, account statuses) reside strictly in MySQL (`copmap_auth`). High-volume law enforcement domain data (teams, operations, geofenced checkpoints, task dispatches, and GPS breadcrumbs) reside in PostgreSQL (`copmap`).
 - **Distributed In-Memory Telemetry & Caching**: Redis 7 powers sub-10ms officer directory lookups and stores the latest 20-second GPS fixes for real-time map rendering.
 - **Evidence-Grade Immutability**: All tactical events, team modifications, assignment completions, and operation reviews generate append-only audit logs. Location checkpoints with active audit logs are protected from deletion (`409 Conflict`).
 - **Instant Client-Side Dossier Compilation**: Zero-server-overhead PDF generation generates classified operational summaries for Division Supervisors, Senior Planners, Team Leads, Control Operators, and Individual Officers.
@@ -118,11 +118,11 @@ sequenceDiagram
     participant App as Spring Boot Application
     participant MSConfig as MySqlDatabaseConfig (@Primary)
     participant PGConfig as PostgresDatabaseConfig
-    participant MySQLDB as MySQL (auth_app_yt)
+    participant MySQLDB as MySQL (copmap_auth)
     participant PGDB as PostgreSQL (copmap)
 
     Note over App,MySQLDB: IAM & Authentication Packages
-    App->>MSConfig: Scan com.substring.auth.app.auth.repositories
+    App->>MSConfig: Scan com.copmap.auth.repositories
     MSConfig->>MySQLDB: Connection Pool (Hikari - Port 3306)
     MySQLDB-->>MSConfig: Tables: users, roles, refresh_tokens
 
@@ -610,7 +610,7 @@ CopMap features zero-server-overhead, client-side PDF dossier compilation using 
 
 #### 1. MySQL (Identity & IAM)
 ```sql
-CREATE DATABASE IF NOT EXISTS auth_app_yt;
+CREATE DATABASE IF NOT EXISTS copmap_auth;
 ```
 
 #### 2. PostgreSQL (Tactical Domain)
@@ -644,7 +644,7 @@ redis-cli ping
 
    spring:
      datasource:
-       url: jdbc:mysql://localhost:3306/auth_app_yt?createDatabaseIfNotExist=true
+       url: jdbc:mysql://localhost:3306/copmap_auth?createDatabaseIfNotExist=true
        username: root
        password: your_mysql_password
      data:

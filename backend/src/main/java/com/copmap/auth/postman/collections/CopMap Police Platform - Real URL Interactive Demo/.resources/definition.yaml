@@ -1,0 +1,33 @@
+$kind: collection
+description: "Complete Interactive Demo Collection where EVERY request URL is the literal REAL URL taking real IDs as concrete examples (e.g. Team ID: 6881c2dd-237b-474e-8d99-e6f384a8adbf, Officer ID: dcd3cb4f-ee31-44ee-96d9-f00e43775472, Operation ID: 41c39f43-d780-4483-9817-d7ff73d0f1c5). Includes full saved Demo Examples displaying formatted response payloads."
+variables:
+  - key: baseUrl
+    value: http://localhost:8082
+    secret: false
+  - key: runId
+    value: "1794677612"
+    secret: false
+  - key: bearer_token_0k0t
+    secret: true
+  - key: bearer_token_0kvv
+    secret: true
+  - key: bearer_token_0pbj
+    secret: true
+  - key: bearer_token_0a84
+    secret: true
+  - key: bearer_token_06ie
+    secret: true
+  - key: bearer_token_10lz
+    secret: true
+  - key: json_web_token_0gwt
+    secret: true
+  - key: json_web_token_03rj
+    secret: true
+  - key: json_web_token_09ux
+    secret: true
+  - key: json_web_token_0y9w
+    secret: true
+  - key: json_web_token_190o
+    secret: true
+  - key: json_web_token_0fre
+    secret: true

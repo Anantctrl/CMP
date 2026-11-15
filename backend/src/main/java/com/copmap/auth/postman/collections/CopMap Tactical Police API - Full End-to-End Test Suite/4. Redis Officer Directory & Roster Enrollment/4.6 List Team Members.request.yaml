@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/teams/{{teamId}}/members"
+method: GET
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{plannerToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () { pm.expect(pm.response.code).to.eql(200); });
+      var json = pm.response.json();
+      pm.test('Roster contains field officer', function () { pm.expect(json.some(m => m.officerId === pm.environment.get('officerId'))).to.be.true; });
+    language: text/javascript
+order: 6000

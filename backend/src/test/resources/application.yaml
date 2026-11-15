@@ -1,10 +1,10 @@
 spring:
   application:
-    name: auth-app-backend-test
+    name: copmap-backend-test
   profiles:
     active: qa
   datasource:
-    jdbc-url: ${MYSQL_URL:jdbc:mysql://localhost:3306/auth_app_yt}
+    jdbc-url: ${MYSQL_URL:jdbc:mysql://localhost:3306/copmap_auth}
     username: ${MYSQL_USER:root}
     password: ${MYSQL_PASSWORD:mysql}
 

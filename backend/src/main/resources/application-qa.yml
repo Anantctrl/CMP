@@ -11,7 +11,7 @@ spring:
       port: ${REDIS_PORT:6379}
       timeout: 2000ms
   datasource:
-    jdbc-url: ${MYSQL_URL:jdbc:mysql://localhost:3306/auth_app_yt}
+    jdbc-url: ${MYSQL_URL:jdbc:mysql://localhost:3306/copmap_auth}
     username: ${MYSQL_USER:root}
     password: ${MYSQL_PASSWORD:mysql}
 
@@ -31,7 +31,7 @@ logging:
 security:
   jwt:
     secret: ${JWT_SECRET}
-    issuer: ${JWT_ISSUER:api.substring.com}
+    issuer: ${JWT_ISSUER:api.copmap.gov}
     access-ttl-seconds: ${JWT_ACCESS_TTL_SECONDS:86400}
     refresh-ttl-seconds: ${JWT_REFRESH_TTL_SECONDS:86400}
     refresh-token-cookie-name: ${JWT_REFRESH_COOKIE_NAME:refreshToken}

@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/operations/approval-requests"
+method: GET
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{supervisorToken}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () { pm.expect(pm.response.code).to.eql(200); });
+      var json = pm.response.json();
+      pm.test('Approval requests list returned', function () { pm.expect(Array.isArray(json)).to.be.true; });
+      var pending = json.find(r => r.operationId === pm.environment.get('operationId'));
+      if (pending) { pm.environment.set('approvalId', pending.id); }
+    language: text/javascript
+order: 2000

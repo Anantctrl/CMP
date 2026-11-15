@@ -1,0 +1,69 @@
+$kind: http-example
+name: "Demo Example: 201 Created"
+request:
+  url: http://localhost:8082/api/v1/teams
+  method: POST
+  headers:
+    Content-Type: application/json
+    Authorization: "{{bearer_token_0kvv}}"
+    User-Agent: PostmanRuntime/7.39.1
+    Accept: "*/*"
+    Cache-Control: no-cache
+    Postman-Token: 460916cd-cb4b-4449-b59f-36f1a6ca3088
+    Host: localhost:8082
+    Accept-Encoding: gzip, deflate, br
+    Connection: keep-alive
+    Content-Length: "115"
+    Cookie: refreshToken={{json_web_token_190o}}
+  body:
+    type: json
+    content: |-
+      {
+        "name": "Bravo Perimeter Security 7612",
+        "description": "Outer perimeter cordoning and arterial nakabandi."
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    - key: Vary
+      value: Origin
+    - key: Vary
+      value: Access-Control-Request-Method
+    - key: Vary
+      value: Access-Control-Request-Headers
+    - key: X-Content-Type-Options
+      value: nosniff
+    - key: X-XSS-Protection
+      value: "0"
+    - key: Cache-Control
+      value: no-cache, no-store, max-age=0, must-revalidate
+    - key: Pragma
+      value: no-cache
+    - key: Expires
+      value: "0"
+    - key: X-Frame-Options
+      value: DENY
+    - key: Content-Type
+      value: application/json
+    - key: Transfer-Encoding
+      value: chunked
+    - key: Date
+      value: Sat, 14 Nov 2026 17:33:48 GMT
+    - key: Keep-Alive
+      value: timeout=60
+    - key: Connection
+      value: keep-alive
+  body:
+    type: json
+    content: |-
+      {
+        "id": "86233c9f-26ea-4a79-858c-65345d164e0b",
+        "name": "Bravo Perimeter Security 7612",
+        "description": "Outer perimeter cordoning and arterial nakabandi.",
+        "createdAt": "2026-11-14T23:03:48.7139788+05:30",
+        "memberCount": 0,
+        "userRoleInTeam": "SUPERVISOR",
+        "activeOperationsCount": 0
+      }
+order: 1000

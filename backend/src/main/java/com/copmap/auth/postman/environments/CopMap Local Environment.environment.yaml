@@ -1,0 +1,30 @@
+name: CopMap Local Environment
+values:
+  - key: baseUrl
+    value: 'http://localhost:8082'
+  - key: runId
+    value: '1794677612'
+  - key: supervisorToken
+    value: ''
+  - key: plannerToken
+    value: ''
+  - key: officerToken
+    value: ''
+  - key: teamId
+    value: ''
+  - key: teamId2
+    value: ''
+  - key: officerId
+    value: ''
+  - key: plannerOfficerId
+    value: ''
+  - key: taskId
+    value: ''
+  - key: assignmentId
+    value: ''
+  - key: operationId
+    value: ''
+  - key: locationId
+    value: ''
+  - key: approvalId
+    value: ''

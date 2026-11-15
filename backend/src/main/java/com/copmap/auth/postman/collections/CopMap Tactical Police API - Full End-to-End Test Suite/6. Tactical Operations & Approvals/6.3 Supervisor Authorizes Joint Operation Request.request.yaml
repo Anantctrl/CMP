@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/operations/approval-requests/{{approvalId}}/approve"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{supervisorToken}}
+body:
+  type: json
+  content: |-
+    {
+      "remarks": "Cross-team deployment authorized under ACP order."
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () { pm.expect(pm.response.code).to.eql(200); });
+      var json = pm.response.json();
+      pm.test('Approval state is APPROVED', function () { pm.expect(json.status).to.eql('APPROVED'); });
+    language: text/javascript
+order: 3000

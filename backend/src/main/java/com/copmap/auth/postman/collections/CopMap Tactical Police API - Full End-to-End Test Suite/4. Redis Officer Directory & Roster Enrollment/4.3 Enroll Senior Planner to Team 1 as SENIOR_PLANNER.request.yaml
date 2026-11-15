@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/teams/{{teamId}}/members"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{supervisorToken}}
+body:
+  type: json
+  content: |-
+    {
+      "officerId": "{{plannerOfficerId}}",
+      "teamRole": "SENIOR_PLANNER"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 201 Created', function () { pm.expect(pm.response.code).to.eql(201); });
+      var json = pm.response.json();
+      pm.test('Planner added with SENIOR_PLANNER role', function () { pm.expect(json.teamRole).to.eql('SENIOR_PLANNER'); });
+    language: text/javascript
+order: 3000

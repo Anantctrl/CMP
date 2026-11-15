@@ -1,0 +1,5 @@
+$kind: collection
+description: Comprehensive integration and automated test suite for CopMap law enforcement platform. Tests all Authentication, Users, Teams, Officers, Tasks, Assignments, Operations, Approvals, Tracking, and Audit endpoints.
+variables:
+  baseUrl: http://localhost:8082
+  runId: "1794677612"

@@ -1,0 +1,28 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/operations"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{plannerToken}}
+body:
+  type: json
+  content: |-
+    {
+      "type": "BANDOBAST",
+      "title": "Operation Shield Bandobast 7612",
+      "description": "Multi-team VIP movement and route sterile corridor.",
+      "teamIds": [
+        "{{teamId}}",
+        "{{teamId2}}"
+      ],
+      "requestRemarks": "Requesting Bravo team assistance for outer cordon."
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 201 Created', function () { pm.expect(pm.response.code).to.eql(201); });
+      var json = pm.response.json();
+      pm.test('Operation created', function () { pm.expect(json.id).to.not.be.empty; });
+      pm.environment.set('operationId', json.id);
+    language: text/javascript
+order: 1000
