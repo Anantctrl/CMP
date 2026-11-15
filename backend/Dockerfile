@@ -1,34 +1,35 @@
-#Build stage
+
+# =========================
+# BUILD STAGE
+# =========================
 FROM maven:3.9.6-eclipse-temurin-21 AS build
 
-# Set working directory
 WORKDIR /app
 
-# Copy pom.xml and download dependencies (cached layer)
+# Copy Maven configuration
 COPY pom.xml .
+
+# Download dependencies first for Docker layer caching
 RUN mvn dependency:go-offline
 
-# Copy source code
+# Copy application source
 COPY src ./src
 
-# Build the application
+# Build Spring Boot JAR
 RUN mvn clean package -DskipTests
 
 
-
-
-#Run stage
-
+# =========================
+# RUNTIME STAGE
+# =========================
 FROM eclipse-temurin:21-jre
 
-# Set working directory
 WORKDIR /app
 
-# Copy jar from build stage
+# Copy packaged JAR from build stage
 COPY --from=build /app/target/*.jar app.jar
 
-# Expose application port
-EXPOSE 8080
+# CopMap backend port
+EXPOSE 8082
 
-# Run the Spring Boot app
 ENTRYPOINT ["java", "-jar", "app.jar"]
