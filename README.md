@@ -608,24 +608,6 @@ This provisions:
 > [!NOTE]
 > **Host Port Conflicts**: If you already have a native MySQL instance running on host port 3306, you can either stop the local service (`net stop MySQL80` on Windows, or `sudo systemctl stop mysql` on Linux) or map Compose to port 3307 in `compose.yaml` (`"127.0.0.1:3307:3306"`) and set `MYSQL_URL=jdbc:mysql://localhost:3307/copmap_auth` in your backend shell.
 
-#### Option B: Native Services Setup
-If running databases natively without Docker:
-1. **MySQL 8.4** (Port 3306):
-   ```sql
-   CREATE DATABASE IF NOT EXISTS copmap_auth;
-   ```
-2. **PostgreSQL 16** (Port 5432):
-   ```sql
-   CREATE DATABASE copmap;
-   CREATE USER copmap_app WITH ENCRYPTED PASSWORD 'localdev123';
-   GRANT ALL PRIVILEGES ON DATABASE copmap TO copmap_app;
-   ```
-3. **Redis 7** (Port 6379):
-   ```bash
-   redis-server --port 6379
-   ```
-
----
 
 ### 7.5 Step 3: Backend Setup & Execution (Port 8082)
 
@@ -650,7 +632,7 @@ Spring Boot reads environment variables from the OS/shell environment (it does n
    - **Windows PowerShell**:
      ```powershell
      $env:SPRING_PROFILES_ACTIVE = "qa"
-     $env:JWT_SECRET = "ekqSbKMKgO507t7QvNUz7tXRmlv/eo0YZUkwpFXYKkcsIgJ2e0VsVeelnzX+oUho"
+     $env:JWT_SECRET = "---------o"
      .\mvnw.cmd spring-boot:run
      ```
      *(Or import all `.env` values directly into your PowerShell session)*:
