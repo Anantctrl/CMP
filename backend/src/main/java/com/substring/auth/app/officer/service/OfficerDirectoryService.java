@@ -9,6 +9,9 @@ import com.substring.auth.app.team.entity.TeamMembership;
 import com.substring.auth.app.team.repository.TeamMembershipRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -24,39 +27,61 @@ public class OfficerDirectoryService {
     private final UserRepository userRepository;
     private final OfficerProfileRepository officerRepository;
     private final TeamMembershipRepository teamMembershipRepository;
+    private final CacheManager cacheManager;
 
     public OfficerDirectoryService(
             UserRepository userRepository,
             OfficerProfileRepository officerRepository,
-            TeamMembershipRepository teamMembershipRepository
+            TeamMembershipRepository teamMembershipRepository,
+            @Autowired(required = false) CacheManager cacheManager
     ) {
         this.userRepository = userRepository;
         this.officerRepository = officerRepository;
         this.teamMembershipRepository = teamMembershipRepository;
+        this.cacheManager = cacheManager;
     }
 
     @Cacheable(value = "officers_directory", key = "'all'")
+    @SuppressWarnings("unchecked")
     public synchronized List<OfficerDirectoryDto> getAllOfficersCached() {
+        if (cacheManager != null) {
+            Cache cache = cacheManager.getCache("officers_directory");
+            if (cache != null) {
+                Cache.ValueWrapper wrapper = cache.get("all");
+                if (wrapper != null && wrapper.get() instanceof List) {
+                    return (List<OfficerDirectoryDto>) wrapper.get();
+                }
+            }
+        }
+
         log.info("[REDIS CACHE MISS] Loading officer directory from database and populating Redis...");
         List<User> users = userRepository.findAll();
         List<OfficerDirectoryDto> list = new ArrayList<>();
 
+        Map<UUID, OfficerProfile> profileMap = new HashMap<>();
+        for (OfficerProfile profile : officerRepository.findAll()) {
+            if (profile.getMysqlUserId() != null) {
+                profileMap.put(profile.getMysqlUserId(), profile);
+            }
+        }
+
         for (User user : users) {
-            OfficerProfile profile = officerRepository.findByMysqlUserId(user.getId())
-                    .orElseGet(() -> {
-                        try {
-                            OfficerProfile newProfile = new OfficerProfile();
-                            newProfile.setMysqlUserId(user.getId());
-                            newProfile.setOfficerName(user.getName());
-                            String desig = (user.getPolicePost() != null && !user.getPolicePost().isBlank())
-                                    ? user.getPolicePost().trim()
-                                    : "Officer";
-                            newProfile.setDesignation(desig);
-                            return officerRepository.save(newProfile);
-                        } catch (Exception e) {
-                            return officerRepository.findByMysqlUserId(user.getId()).orElse(null);
-                        }
-                    });
+            OfficerProfile profile = profileMap.get(user.getId());
+            if (profile == null) {
+                try {
+                    OfficerProfile newProfile = new OfficerProfile();
+                    newProfile.setMysqlUserId(user.getId());
+                    newProfile.setOfficerName(user.getName());
+                    String desig = (user.getPolicePost() != null && !user.getPolicePost().isBlank())
+                            ? user.getPolicePost().trim()
+                            : "Officer";
+                    newProfile.setDesignation(desig);
+                    profile = officerRepository.save(newProfile);
+                    profileMap.put(user.getId(), profile);
+                } catch (Exception e) {
+                    profile = officerRepository.findByMysqlUserId(user.getId()).orElse(null);
+                }
+            }
 
             if (profile == null) {
                 continue;

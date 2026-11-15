@@ -47,7 +47,7 @@ public class RedisAdvancedCachingTest {
             officerDirectoryService.evictDirectoryCache();
 
             int threadCount = 100;
-            ExecutorService executor = Executors.newFixedThreadPool(25);
+            ExecutorService executor = Executors.newFixedThreadPool(threadCount);
             CountDownLatch readyLatch = new CountDownLatch(threadCount);
             CountDownLatch startLatch = new CountDownLatch(1);
             AtomicInteger successCount = new AtomicInteger(0);

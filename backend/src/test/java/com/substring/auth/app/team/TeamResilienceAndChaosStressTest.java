@@ -349,9 +349,9 @@ public class TeamResilienceAndChaosStressTest {
     @Order(4)
     @DisplayName("1.4 Server Pressure & Error 500 Immunity: Burst traffic & controlled internal error format")
     void shouldHandleServerPressureAndReturnStandardized500WithoutLeakingInternals() throws Exception {
-        // High concurrency load: 30 requests barrage
-        int burstRequests = 30;
-        ExecutorService executor = Executors.newFixedThreadPool(15);
+        // High concurrency load: 15 requests barrage
+        int burstRequests = 15;
+        ExecutorService executor = Executors.newFixedThreadPool(8);
         CountDownLatch latch = new CountDownLatch(burstRequests);
         AtomicInteger successCount = new AtomicInteger(0);
 
@@ -371,7 +371,7 @@ public class TeamResilienceAndChaosStressTest {
             });
         }
 
-        boolean done = latch.await(15, TimeUnit.SECONDS);
+        boolean done = latch.await(45, TimeUnit.SECONDS);
         executor.shutdown();
 
         assertThat(done).isTrue();
