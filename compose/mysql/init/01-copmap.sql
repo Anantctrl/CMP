@@ -1,4 +1,4 @@
-CREATE DATABASE IF NOT EXISTS mydatabase;
--- Do not commit real passwords - set this value locally if you use this user.
-CREATE USER IF NOT EXISTS 'myuser'@'%' IDENTIFIED BY 'CHANGE_ME_LOCALLY';
-GRANT ALL PRIVILEGES ON mydatabase.* TO 'myuser'@'%';
+-- CopMap MySQL Database Initialization
+CREATE DATABASE IF NOT EXISTS copmap_auth;
+GRANT ALL PRIVILEGES ON copmap_auth.* TO 'root'@'%';
+FLUSH PRIVILEGES;

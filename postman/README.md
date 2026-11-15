@@ -8,18 +8,18 @@ This directory contains the complete automated test suite and live interactive d
 
 | File | Type | Description |
 |---|---|---|
-| [`CopMap_Live_Demo.postman_collection.json`](file:///D:/Project/cmp/postman/CopMap_Live_Demo.postman_collection.json) | **Interactive Demo Collection** | **Every single URL is a REAL live URL** with concrete example IDs and pre-injected 24-hour Bearer tokens. Includes **all 45 saved demo responses** showing real requests, real headers, and formatted JSON output. |
-| [`CopMap_API_Tests.postman_collection.json`](file:///D:/Project/cmp/postman/CopMap_API_Tests.postman_collection.json) | **Automated CI/CD Test Suite** | 45 comprehensive end-to-end API test requests with 82 dynamic assertions and collection fallback variables. Passes 100% (82/82 assertions, 0 failures). |
-| [`CopMap_Local.postman_environment.json`](file:///D:/Project/cmp/postman/CopMap_Local.postman_environment.json) | **Postman Environment** | Target `http://localhost:8082` with all concrete entity IDs and active 24-hour JWT tokens. |
-| [`test-run-output.txt`](file:///D:/Project/cmp/postman/test-run-output.txt) | **Live Newman Execution Log** | Full raw terminal output of the latest automated Newman execution (82/82 passed). |
-| [`test-run-report.json`](file:///D:/Project/cmp/postman/test-run-report.json) | **Machine-Readable Report** | Newman JSON execution report with timestamps, HTTP latencies, headers, and payloads. |
-| [`setup-postman-suite.js`](file:///D:/Project/cmp/postman/setup-postman-suite.js) | **Maintenance Script** | Automation script used to sync demo examples and environment tokens from live database runs. |
+| [`CopMap_Live_Demo.postman_collection.json`](./CopMap_Live_Demo.postman_collection.json) | **Interactive Demo Collection** | **Every single URL is a REAL live URL** with concrete example IDs and pre-injected 24-hour Bearer tokens. Includes **all 45 saved demo responses** showing real requests, real headers, and formatted JSON output. |
+| [`CopMap_API_Tests.postman_collection.json`](./CopMap_API_Tests.postman_collection.json) | **Automated CI/CD Test Suite** | 45 comprehensive end-to-end API test requests with 82 dynamic assertions and collection fallback variables. Passes 100% (82/82 assertions, 0 failures). |
+| [`CopMap_Local.postman_environment.json`](./CopMap_Local.postman_environment.json) | **Postman Environment** | Target `http://localhost:8082` with all concrete entity IDs and active 24-hour JWT tokens. |
+| [`test-run-output.txt`](./test-run-output.txt) | **Live Newman Execution Log** | Full raw terminal output of the latest automated Newman execution (82/82 passed). |
+| [`test-run-report.json`](./test-run-report.json) | **Machine-Readable Report** | Newman JSON execution report with timestamps, HTTP latencies, headers, and payloads. |
+| [`setup-postman-suite.js`](./setup-postman-suite.js) | **Maintenance Script** | Automation script used to sync demo examples and environment tokens from live database runs. |
 
 ---
 
 ## 🔍 Concrete Example IDs Used Across Collections
 
-All requests in [`CopMap_Live_Demo.postman_collection.json`](file:///D:/Project/cmp/postman/CopMap_Live_Demo.postman_collection.json) and default environment variables use verified entities present in the live database:
+All requests in [`CopMap_Live_Demo.postman_collection.json`](./CopMap_Live_Demo.postman_collection.json) and default environment variables use verified entities present in the live database:
 
 | Entity | Example Live ID / Value | Description |
 |---|---|---|
@@ -40,7 +40,7 @@ All requests in [`CopMap_Live_Demo.postman_collection.json`](file:///D:/Project/
 ## 🖥️ How to Use in Postman Desktop
 
 ### 1. Interactive Demo Walkthrough (`CopMap_Live_Demo.postman_collection.json`)
-1. In Postman Desktop, click **Import** $\rightarrow$ select [`CopMap_Live_Demo.postman_collection.json`](file:///D:/Project/cmp/postman/CopMap_Live_Demo.postman_collection.json).
+1. In Postman Desktop, click **Import** $\rightarrow$ select [`CopMap_Live_Demo.postman_collection.json`](./CopMap_Live_Demo.postman_collection.json).
 2. Expand any folder in the left sidebar (e.g., `3. Tactical Teams Creation` or `6. Tactical Operations & Approvals`).
 3. Click on any request:
    - Notice the **URL bar** displays the literal real URL:
@@ -53,7 +53,7 @@ All requests in [`CopMap_Live_Demo.postman_collection.json`](file:///D:/Project/
    - Postman renders the saved example showing the full request, headers, status code, and formatted JSON response payload.
 
 ### 2. Automated Test Suite (`CopMap_API_Tests.postman_collection.json`)
-1. Import [`CopMap_API_Tests.postman_collection.json`](file:///D:/Project/cmp/postman/CopMap_API_Tests.postman_collection.json) and [`CopMap_Local.postman_environment.json`](file:///D:/Project/cmp/postman/CopMap_Local.postman_environment.json).
+1. Import [`CopMap_API_Tests.postman_collection.json`](./CopMap_API_Tests.postman_collection.json) and [`CopMap_Local.postman_environment.json`](./CopMap_Local.postman_environment.json).
 2. In the top-right environment picker, select **CopMap Local Environment**.
 3. Right-click the collection $\rightarrow$ **Run Collection** $\rightarrow$ Click **Run CopMap Tactical Police API**.
 4. All 45 requests execute in sequence, chaining tokens and IDs dynamically, validating all 82 test assertions.

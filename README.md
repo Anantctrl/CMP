@@ -569,8 +569,8 @@ Follow this guide to run the entire CopMap platform from scratch on Windows or L
 ### 7.2 Step 1: Database Provisioning (Docker Compose or Native)
 
 #### Option A: One-Command Docker Setup (Recommended)
-From the project root (`D:\Project\cmp`):
-```powershell
+From the repository root:
+```bash
 docker compose up -d mysql postgres redis
 ```
 This automatically initializes:
@@ -599,7 +599,7 @@ If running MySQL, PostgreSQL, and Redis as local services:
 
 ### 7.3 Step 2: Environment Configuration
 
-Verify or create the `.env` file in the project root (`D:\Project\cmp\.env`):
+Verify or create the `.env` file in the repository root (`.env`):
 ```env
 # Database Credentials
 MYSQL_ROOT_PASSWORD=mysql
@@ -621,19 +621,27 @@ DEV_SEED_PASSWORD=Password@123
 
 ### 7.4 Step 3: Backend Setup & Execution (Port 8082)
 
-1. Open PowerShell and navigate to the backend directory:
-   ```powershell
-   cd D:\Project\cmp\backend
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
    ```
 
 2. Compile the backend:
-   ```powershell
+   ```bash
+   # Windows PowerShell / CMD
    .\mvnw.cmd clean compile
+
+   # macOS / Linux
+   ./mvnw clean compile
    ```
 
 3. Launch the Spring Boot application:
-   ```powershell
+   ```bash
+   # Windows PowerShell / CMD
    .\mvnw.cmd spring-boot:run
+
+   # macOS / Linux
+   ./mvnw spring-boot:run
    ```
    *The backend will boot under active profile `qa`, connect to MySQL (`copmap_auth`), PostgreSQL (`copmap`), and Redis (`6379`), initialize database schemas, and listen on **`http://localhost:8082`**.*
 
@@ -645,18 +653,18 @@ DEV_SEED_PASSWORD=Password@123
 
 ### 7.5 Step 4: Frontend Setup & Execution (Port 5173)
 
-1. Open a new PowerShell terminal and navigate to the frontend directory:
-   ```powershell
-   cd D:\Project\cmp\frontend
+1. In a new terminal, navigate to the frontend directory:
+   ```bash
+   cd frontend
    ```
 
 2. Install dependencies:
-   ```powershell
+   ```bash
    npm install
    ```
 
 3. Launch the Vite development server:
-   ```powershell
+   ```bash
    npm run dev
    ```
 
@@ -670,9 +678,14 @@ DEV_SEED_PASSWORD=Password@123
 
 #### 1. Execute Full Java Automated Test Suite (157 Tests)
 Run the entire suite of unit, integration, multi-database routing, and chaos stress tests:
-```powershell
-cd D:\Project\cmp\backend
+```bash
+cd backend
+
+# Windows PowerShell / CMD
 .\mvnw.cmd test
+
+# macOS / Linux
+./mvnw test
 ```
 **Expected Verified Result:**
 ```
@@ -687,10 +700,10 @@ cd D:\Project\cmp\backend
 
 #### 2. Execute Headless Newman API Suite (45 Requests / 82 Assertions)
 With the backend running on port 8082, execute Newman against the automated API suite:
-```powershell
-cd D:\Project\cmp\postman
-npx newman run CopMap_API_Tests.postman_collection.json `
-  -e CopMap_Local.postman_environment.json `
+```bash
+cd postman
+npx newman run CopMap_API_Tests.postman_collection.json \
+  -e CopMap_Local.postman_environment.json \
   --reporters cli
 ```
 **Expected Result:**
@@ -705,7 +718,7 @@ npx newman run CopMap_API_Tests.postman_collection.json `
 ```
 
 #### 3. Interactive Postman Live Demo Collection
-For manual testing and endpoint exploration, import [`CopMap_Live_Demo.postman_collection.json`](file:///D:/Project/cmp/postman/CopMap_Live_Demo.postman_collection.json) into Postman. It contains pre-configured requests with realistic UUIDs and 45 real saved response examples.
+For manual testing and endpoint exploration, import [`CopMap_Live_Demo.postman_collection.json`](./postman/CopMap_Live_Demo.postman_collection.json) into Postman. It contains pre-configured requests with realistic UUIDs and 45 real saved response examples.
 
 ---
 
