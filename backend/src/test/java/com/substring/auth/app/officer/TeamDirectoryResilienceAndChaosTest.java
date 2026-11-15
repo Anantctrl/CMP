@@ -34,6 +34,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -84,6 +85,10 @@ public class TeamDirectoryResilienceAndChaosTest {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
+    private final List<UUID> createdUserIds = Collections.synchronizedList(new ArrayList<>());
+    private final List<UUID> createdOfficerIds = Collections.synchronizedList(new ArrayList<>());
+    private final List<UUID> createdTeamIds = Collections.synchronizedList(new ArrayList<>());
+
     private Role supervisorRole;
     private Role officerRole;
 
@@ -132,6 +137,30 @@ public class TeamDirectoryResilienceAndChaosTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+
+        for (UUID teamId : new ArrayList<>(createdTeamIds)) {
+            try {
+                membershipRepository.deleteAll(membershipRepository.findAllByTeam_Id(teamId));
+                teamRepository.deleteById(teamId);
+            } catch (Exception ignored) {}
+        }
+        createdTeamIds.clear();
+
+        for (UUID officerId : new ArrayList<>(createdOfficerIds)) {
+            try {
+                officerRepository.deleteById(officerId);
+            } catch (Exception ignored) {}
+        }
+        createdOfficerIds.clear();
+
+        for (UUID userId : new ArrayList<>(createdUserIds)) {
+            try {
+                userRepository.deleteById(userId);
+            } catch (Exception ignored) {}
+        }
+        createdUserIds.clear();
+
+        directoryService.evictDirectoryCache();
     }
 
     private User createTestUser(String email, String post, Role role) {
@@ -142,11 +171,13 @@ public class TeamDirectoryResilienceAndChaosTest {
         u.setPassword("$2a$10$abcdefghijklmnopqrstuvxyz123456");
         u.setRole(role);
         u.setEnable(true);
-        return userRepository.save(u);
+        User saved = userRepository.save(u);
+        createdUserIds.add(saved.getId());
+        return saved;
     }
 
     private OfficerProfile createTestOfficer(User user, String designation) {
-        return officerRepository.findByMysqlUserId(user.getId())
+        OfficerProfile profile = officerRepository.findByMysqlUserId(user.getId())
                 .orElseGet(() -> {
                     OfficerProfile p = new OfficerProfile();
                     p.setMysqlUserId(user.getId());
@@ -154,6 +185,8 @@ public class TeamDirectoryResilienceAndChaosTest {
                     p.setDesignation(designation);
                     return officerRepository.save(p);
                 });
+        createdOfficerIds.add(profile.getId());
+        return profile;
     }
 
     private void authenticate(User user) {
@@ -161,9 +194,15 @@ public class TeamDirectoryResilienceAndChaosTest {
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                 user,
                 null,
-                List.of(new SimpleGrantedAuthority(roleName))
+                List.of(new SimpleGrantedAuthority(roleName), new SimpleGrantedAuthority("ROLE_" + roleName))
         );
         SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    private TeamResponse createTestTeam(String name, String description) {
+        TeamResponse team = teamService.createTeam(new CreateTeamRequest(name, description));
+        createdTeamIds.add(team.id());
+        return team;
     }
 
     // =========================================================================
@@ -223,7 +262,7 @@ public class TeamDirectoryResilienceAndChaosTest {
     @DisplayName("1.3 Controller Scoped Directory: Available officers per team requires authorized team role")
     void shouldEnforceTeamRoleOnScopedAvailableOfficersEndpoint() throws Exception {
         authenticate(supervisorUser);
-        TeamResponse team = teamService.createTeam(new CreateTeamRequest("Scope-Test-Team-" + UUID.randomUUID(), "Testing team scope"));
+        TeamResponse team = createTestTeam("Scope-Test-Team-" + UUID.randomUUID(), "Testing team scope");
 
         // Senior Planner is added to the team
         teamService.addMember(team.id(), new AddTeamMemberRequest(plannerOfficer.getId(), TeamRole.SENIOR_PLANNER));
@@ -272,7 +311,7 @@ public class TeamDirectoryResilienceAndChaosTest {
     @DisplayName("2.1 Service Filtering: Available officers accurately excludes existing team members")
     void shouldFilterOutExistingTeamMembersFromAvailableDirectory() {
         authenticate(supervisorUser);
-        TeamResponse team = teamService.createTeam(new CreateTeamRequest("Filter-Test-Team-" + UUID.randomUUID(), "Filtering validation"));
+        TeamResponse team = createTestTeam("Filter-Test-Team-" + UUID.randomUUID(), "Filtering validation");
 
         // Add Constable to team
         teamService.addMember(team.id(), new AddTeamMemberRequest(constableOfficer.getId(), TeamRole.FIELD_OPERATOR));
@@ -339,7 +378,7 @@ public class TeamDirectoryResilienceAndChaosTest {
 
     @Test
     @Order(8)
-    @DisplayName("3.1 Server Pressure: 15 concurrent cold-cache requests handled without duplicate keys or deadlocks")
+    @DisplayName("3.1 Server Pressure: 15 concurrent requests dispatched on cold cache without race conditions or deadlocks")
     void shouldHandleConcurrentDirectoryRequestsOnColdCache() throws Exception {
         // Force cold cache
         directoryService.evictDirectoryCache();
@@ -349,6 +388,7 @@ public class TeamDirectoryResilienceAndChaosTest {
         CountDownLatch startGate = new CountDownLatch(1);
         CountDownLatch completionGate = new CountDownLatch(threadCount);
         AtomicInteger successCounter = new AtomicInteger(0);
+        ConcurrentLinkedQueue<Throwable> workerErrors = new ConcurrentLinkedQueue<>();
 
         for (int i = 0; i < threadCount; i++) {
             executor.submit(() -> {
@@ -359,8 +399,11 @@ public class TeamDirectoryResilienceAndChaosTest {
                             .andReturn();
                     if (res.getResponse().getStatus() == 200) {
                         successCounter.incrementAndGet();
+                    } else {
+                        workerErrors.add(new AssertionError("Expected HTTP 200 but received status " + res.getResponse().getStatus()));
                     }
-                } catch (Exception ignored) {
+                } catch (Throwable t) {
+                    workerErrors.add(t);
                 } finally {
                     completionGate.countDown();
                 }
@@ -370,17 +413,21 @@ public class TeamDirectoryResilienceAndChaosTest {
         startGate.countDown();
         boolean done = completionGate.await(45, TimeUnit.SECONDS);
         executor.shutdown();
+        if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+            executor.shutdownNow();
+        }
 
-        assertThat(done).isTrue();
+        assertThat(done).as("All concurrent workers must finish within latch timeout").isTrue();
+        assertThat(workerErrors).as("Zero worker errors allowed during cold-cache load").isEmpty();
         assertThat(successCounter.get()).isEqualTo(threadCount);
     }
 
     @Test
     @Order(9)
-    @DisplayName("3.2 Concurrency: Concurrent available officer queries while memberships are actively added")
+    @DisplayName("3.2 Concurrency & Consistency: Availability queries while memberships mutate concurrently")
     void shouldHandleConcurrentAvailabilityQueriesDuringRosterMutations() throws Exception {
         authenticate(supervisorUser);
-        TeamResponse team = teamService.createTeam(new CreateTeamRequest("Concurrent-Avail-Team-" + UUID.randomUUID(), "Stress available"));
+        TeamResponse team = createTestTeam("Concurrent-Avail-Team-" + UUID.randomUUID(), "Stress available");
 
         // Pre-create 5 officers that will be added to the team concurrently
         List<OfficerProfile> officersToAdd = new ArrayList<>();
@@ -401,6 +448,7 @@ public class TeamDirectoryResilienceAndChaosTest {
         CountDownLatch completionGate = new CountDownLatch(totalWorkers);
         AtomicInteger querySuccessCounter = new AtomicInteger(0);
         AtomicInteger mutationSuccessCounter = new AtomicInteger(0);
+        ConcurrentLinkedQueue<Throwable> workerErrors = new ConcurrentLinkedQueue<>();
 
         // Submit concurrent read workers
         for (int i = 0; i < readQueries; i++) {
@@ -412,7 +460,8 @@ public class TeamDirectoryResilienceAndChaosTest {
                     if (avail != null) {
                         querySuccessCounter.incrementAndGet();
                     }
-                } catch (Exception ignored) {
+                } catch (Throwable t) {
+                    workerErrors.add(t);
                 } finally {
                     SecurityContextHolder.clearContext();
                     completionGate.countDown();
@@ -428,7 +477,8 @@ public class TeamDirectoryResilienceAndChaosTest {
                     authenticate(supervisorUser);
                     teamService.addMember(team.id(), new AddTeamMemberRequest(officer.getId(), TeamRole.FIELD_OPERATOR));
                     mutationSuccessCounter.incrementAndGet();
-                } catch (Exception ignored) {
+                } catch (Throwable t) {
+                    workerErrors.add(t);
                 } finally {
                     SecurityContextHolder.clearContext();
                     completionGate.countDown();
@@ -439,10 +489,23 @@ public class TeamDirectoryResilienceAndChaosTest {
         startGate.countDown();
         boolean done = completionGate.await(45, TimeUnit.SECONDS);
         executor.shutdown();
+        if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+            executor.shutdownNow();
+        }
 
-        assertThat(done).isTrue();
+        assertThat(done).as("All read/write workers must finish within latch timeout").isTrue();
+        assertThat(workerErrors).as("Zero worker errors allowed during concurrent roster mutation").isEmpty();
         assertThat(querySuccessCounter.get()).isEqualTo(readQueries);
         assertThat(mutationSuccessCounter.get()).isEqualTo(writeMutations);
+
+        // Verification of business consistency: Newly added officers must NO LONGER appear in available officers list
+        authenticate(supervisorUser);
+        Set<UUID> addedOfficerIds = officersToAdd.stream().map(OfficerProfile::getId).collect(Collectors.toSet());
+        List<OfficerDirectoryDto> finalAvailable = directoryService.getAvailableOfficersForTeam(team.id());
+        boolean anyAddedOfficerStillAvailable = finalAvailable.stream().anyMatch(o -> addedOfficerIds.contains(o.officerId()));
+        assertThat(anyAddedOfficerStillAvailable)
+                .as("Officers assigned to the team must be excluded from available officer directory")
+                .isFalse();
     }
 
     // =========================================================================
@@ -473,8 +536,8 @@ public class TeamDirectoryResilienceAndChaosTest {
 
     @Test
     @Order(12)
-    @DisplayName("4.3 Block Redis: Corrupt cache entry detected, evicted and rebuilt from direct database")
-    void shouldRecoverGracefullyWhenRedisCacheEntryIsCorrupted() {
+    @DisplayName("4.3 Block Redis: Corrupted cache entry rejection, eviction & database reload recovery")
+    void shouldRejectCorruptedCacheEntryAndRecoverViaEvictionAndDatabaseReload() {
         // Populate corrupted data in Redis cache key
         String cacheKey = "officers_directory::all";
         redisTemplate.opsForValue().set(cacheKey, "CORRUPTED_CACHE_VALUE_NON_LIST", Duration.ofSeconds(10));
@@ -484,7 +547,7 @@ public class TeamDirectoryResilienceAndChaosTest {
             assertThatThrownBy(() -> directoryService.getAllOfficersCached())
                     .isInstanceOf(ClassCastException.class);
 
-            // Self-healing / recovery: Evict corrupt cache entry
+            // Controlled recovery: Evict corrupt cache entry
             directoryService.evictDirectoryCache();
 
             // Directory service safely rebuilds fresh cache directly from database

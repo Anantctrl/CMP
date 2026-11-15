@@ -94,6 +94,10 @@ public class TeamResilienceAndChaosStressTest {
     @Qualifier("postgresTransactionManager")
     private PlatformTransactionManager postgresTransactionManager;
 
+    private final List<UUID> createdUserIds = Collections.synchronizedList(new ArrayList<>());
+    private final List<UUID> createdOfficerIds = Collections.synchronizedList(new ArrayList<>());
+    private final List<UUID> createdTeamIds = Collections.synchronizedList(new ArrayList<>());
+
     private Role supervisorRole;
     private Role officerRole;
 
@@ -142,6 +146,29 @@ public class TeamResilienceAndChaosStressTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+
+        for (UUID teamId : new ArrayList<>(createdTeamIds)) {
+            try {
+                auditLogRepository.deleteAll(auditLogRepository.findAllByTeam_IdOrderByCreatedAtDesc(teamId));
+                membershipRepository.deleteAll(membershipRepository.findAllByTeam_Id(teamId));
+                teamRepository.deleteById(teamId);
+            } catch (Exception ignored) {}
+        }
+        createdTeamIds.clear();
+
+        for (UUID officerId : new ArrayList<>(createdOfficerIds)) {
+            try {
+                officerRepository.deleteById(officerId);
+            } catch (Exception ignored) {}
+        }
+        createdOfficerIds.clear();
+
+        for (UUID userId : new ArrayList<>(createdUserIds)) {
+            try {
+                userRepository.deleteById(userId);
+            } catch (Exception ignored) {}
+        }
+        createdUserIds.clear();
     }
 
     private User createTestUser(String email, String post, Role role) {
@@ -152,11 +179,13 @@ public class TeamResilienceAndChaosStressTest {
         u.setPassword("$2a$10$abcdefghijklmnopqrstuvxyz123456");
         u.setRole(role);
         u.setEnable(true);
-        return userRepository.save(u);
+        User saved = userRepository.save(u);
+        createdUserIds.add(saved.getId());
+        return saved;
     }
 
     private OfficerProfile createTestOfficer(User user, String designation) {
-        return officerRepository.findByMysqlUserId(user.getId())
+        OfficerProfile profile = officerRepository.findByMysqlUserId(user.getId())
                 .orElseGet(() -> {
                     OfficerProfile p = new OfficerProfile();
                     p.setMysqlUserId(user.getId());
@@ -164,6 +193,14 @@ public class TeamResilienceAndChaosStressTest {
                     p.setDesignation(designation);
                     return officerRepository.save(p);
                 });
+        createdOfficerIds.add(profile.getId());
+        return profile;
+    }
+
+    private TeamResponse createTestTeam(String name, String description) {
+        TeamResponse team = teamService.createTeam(new CreateTeamRequest(name, description));
+        createdTeamIds.add(team.id());
+        return team;
     }
 
     private void authenticate(User user) {
@@ -224,6 +261,9 @@ public class TeamResilienceAndChaosStressTest {
         startGate.countDown();
         boolean completed = completionGate.await(15, TimeUnit.SECONDS);
         executor.shutdown();
+        if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+            executor.shutdownNow();
+        }
 
         assertThat(completed).isTrue();
         assertThat(exceptions).isEmpty();
@@ -233,6 +273,7 @@ public class TeamResilienceAndChaosStressTest {
             assertThat(res.getResponse().getStatus()).isEqualTo(201);
             TeamResponse tr = objectMapper.readValue(res.getResponse().getContentAsString(), TeamResponse.class);
             assertThat(tr.id()).isNotNull();
+            createdTeamIds.add(tr.id());
 
             // Verify each team audit log records the respective creator correctly
             List<TeamAuditLog> logs = auditLogRepository.findAllByTeam_IdOrderByCreatedAtDesc(tr.id());
@@ -277,32 +318,38 @@ public class TeamResilienceAndChaosStressTest {
         // 4. SQL Injection payload -> Handled safely as a literal string (ORM parameter binding prevents execution)
         String sqlInjectionName = "Team'; DROP TABLE teams; --" + UUID.randomUUID().toString().substring(0, 6);
         CreateTeamRequest sqlReq = new CreateTeamRequest(sqlInjectionName, "Testing SQL injection immunity");
-        mockMvc.perform(post("/api/v1/teams")
+        MvcResult sqlRes = mockMvc.perform(post("/api/v1/teams")
                         .header("Authorization", "Bearer " + primarySupervisorToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(sqlReq)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name").value(sqlInjectionName));
+                .andExpect(jsonPath("$.name").value(sqlInjectionName))
+                .andReturn();
+        createdTeamIds.add(objectMapper.readValue(sqlRes.getResponse().getContentAsString(), TeamResponse.class).id());
 
         // 5. XSS payload -> Handled safely without executing
         String xssName = "<script>alert('xss')</script> " + UUID.randomUUID().toString().substring(0, 6);
         CreateTeamRequest xssReq = new CreateTeamRequest(xssName, "Testing XSS payload safety");
-        mockMvc.perform(post("/api/v1/teams")
+        MvcResult xssRes = mockMvc.perform(post("/api/v1/teams")
                         .header("Authorization", "Bearer " + primarySupervisorToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(xssReq)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name").value(xssName));
+                .andExpect(jsonPath("$.name").value(xssName))
+                .andReturn();
+        createdTeamIds.add(objectMapper.readValue(xssRes.getResponse().getContentAsString(), TeamResponse.class).id());
 
         // 6. Emojis and Unicode characters -> UTF-8 preserved
         String unicodeName = "🚨 Rapid Response 隊 🚔 " + UUID.randomUUID().toString().substring(0, 6);
         CreateTeamRequest unicodeReq = new CreateTeamRequest(unicodeName, "Unicode tactical description");
-        mockMvc.perform(post("/api/v1/teams")
+        MvcResult uniRes = mockMvc.perform(post("/api/v1/teams")
                         .header("Authorization", "Bearer " + primarySupervisorToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(unicodeReq)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.name").value(unicodeName));
+                .andExpect(jsonPath("$.name").value(unicodeName))
+                .andReturn();
+        createdTeamIds.add(objectMapper.readValue(uniRes.getResponse().getContentAsString(), TeamResponse.class).id());
 
         // 7. Malformed JSON syntax -> 400 Bad Request with Malformed JSON error
         mockMvc.perform(post("/api/v1/teams")
@@ -354,6 +401,7 @@ public class TeamResilienceAndChaosStressTest {
         ExecutorService executor = Executors.newFixedThreadPool(8);
         CountDownLatch latch = new CountDownLatch(burstRequests);
         AtomicInteger successCount = new AtomicInteger(0);
+        ConcurrentLinkedQueue<Throwable> workerErrors = new ConcurrentLinkedQueue<>();
 
         for (int i = 0; i < burstRequests; i++) {
             executor.submit(() -> {
@@ -364,7 +412,8 @@ public class TeamResilienceAndChaosStressTest {
                     if (res.getResponse().getStatus() == 200) {
                         successCount.incrementAndGet();
                     }
-                } catch (Exception ignored) {
+                } catch (Throwable t) {
+                    workerErrors.add(t);
                 } finally {
                     latch.countDown();
                 }
@@ -373,8 +422,12 @@ public class TeamResilienceAndChaosStressTest {
 
         boolean done = latch.await(45, TimeUnit.SECONDS);
         executor.shutdown();
+        if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+            executor.shutdownNow();
+        }
 
         assertThat(done).isTrue();
+        assertThat(workerErrors).isEmpty();
         assertThat(successCount.get()).isEqualTo(burstRequests);
 
         // Verify GlobalExceptionHandler catches 500 errors cleanly without leaking stack traces or credentials
@@ -397,7 +450,7 @@ public class TeamResilienceAndChaosStressTest {
     @DisplayName("2.1 Roster Scaling: Add multiple officers up to high capacity and verify roster consistency")
     void shouldSupportRosterScalingAndLargeMemberships() throws Exception {
         authenticate(primarySupervisor);
-        TeamResponse team = teamService.createTeam(new CreateTeamRequest("Large-Roster-Team-" + UUID.randomUUID(), "Capacity testing"));
+        TeamResponse team = createTestTeam("Large-Roster-Team-" + UUID.randomUUID(), "Capacity testing");
 
         int rosterSize = 20;
         List<OfficerProfile> officers = new ArrayList<>();
@@ -435,7 +488,7 @@ public class TeamResilienceAndChaosStressTest {
     @DisplayName("2.2 Failing Membership Requests: Non-existent IDs, duplicates, invalid enums and unauthorized additions")
     void shouldFailInvalidMembershipRequests() throws Exception {
         authenticate(primarySupervisor);
-        TeamResponse team = teamService.createTeam(new CreateTeamRequest("Validation-Team-" + UUID.randomUUID(), "Fail testing"));
+        TeamResponse team = createTestTeam("Validation-Team-" + UUID.randomUUID(), "Fail testing");
 
         // 1. Non-existent Team ID -> 404 Not Found
         UUID fakeTeamId = UUID.randomUUID();
@@ -507,7 +560,7 @@ public class TeamResilienceAndChaosStressTest {
     @DisplayName("2.3 Single-Account Race Condition: Simultaneous duplicate member addition attempts")
     void shouldHandleSimultaneousDuplicateMembershipRequestsGracefully() throws Exception {
         authenticate(primarySupervisor);
-        TeamResponse team = teamService.createTeam(new CreateTeamRequest("Race-Team-" + UUID.randomUUID(), "Race condition testing"));
+        TeamResponse team = createTestTeam("Race-Team-" + UUID.randomUUID(), "Race condition testing");
 
         User targetUser = createTestUser("target_" + UUID.randomUUID() + "@police.gov", "Constable", officerRole);
         OfficerProfile targetOfficer = createTestOfficer(targetUser, "Target Officer");
@@ -519,6 +572,7 @@ public class TeamResilienceAndChaosStressTest {
 
         AtomicInteger successCounter = new AtomicInteger(0);
         AtomicInteger failureCounter = new AtomicInteger(0);
+        ConcurrentLinkedQueue<Throwable> workerErrors = new ConcurrentLinkedQueue<>();
 
         for (int i = 0; i < threadCount; i++) {
             executor.submit(() -> {
@@ -536,8 +590,8 @@ public class TeamResilienceAndChaosStressTest {
                     } else {
                         failureCounter.incrementAndGet();
                     }
-                } catch (Exception ignored) {
-                    failureCounter.incrementAndGet();
+                } catch (Throwable t) {
+                    workerErrors.add(t);
                 } finally {
                     completionGate.countDown();
                 }
@@ -547,8 +601,12 @@ public class TeamResilienceAndChaosStressTest {
         startGate.countDown();
         boolean finished = completionGate.await(15, TimeUnit.SECONDS);
         executor.shutdown();
+        if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+            executor.shutdownNow();
+        }
 
         assertThat(finished).isTrue();
+        assertThat(workerErrors).isEmpty();
 
         // Exactly ONE request must succeed; all 9 concurrent duplicates must be rejected
         assertThat(successCounter.get()).as("Exactly 1 concurrent addition must succeed").isEqualTo(1);
@@ -564,7 +622,7 @@ public class TeamResilienceAndChaosStressTest {
     @DisplayName("2.4 Multi-Account Simultaneous Additions: Multiple planners adding different officers")
     void shouldHandleSimultaneousAdditionsFromMultipleAccounts() throws Exception {
         authenticate(primarySupervisor);
-        TeamResponse team = teamService.createTeam(new CreateTeamRequest("Multi-Planner-Team-" + UUID.randomUUID(), "Multi-planner additions"));
+        TeamResponse team = createTestTeam("Multi-Planner-Team-" + UUID.randomUUID(), "Multi-planner additions");
 
         // Setup 2 Senior Planners inside the team
         User planner1 = createTestUser("planner1_" + UUID.randomUUID() + "@police.gov", "Planner 1", officerRole);
@@ -593,6 +651,7 @@ public class TeamResilienceAndChaosStressTest {
         CountDownLatch startGate = new CountDownLatch(1);
         CountDownLatch completionGate = new CountDownLatch(additionsPerPlanner * 2);
         AtomicInteger successCounter = new AtomicInteger(0);
+        ConcurrentLinkedQueue<Throwable> workerErrors = new ConcurrentLinkedQueue<>();
 
         for (int i = 0; i < additionsPerPlanner; i++) {
             final int idx = i;
@@ -607,7 +666,8 @@ public class TeamResilienceAndChaosStressTest {
                                     .content(objectMapper.writeValueAsString(req)))
                             .andReturn();
                     if (res.getResponse().getStatus() == 201) successCounter.incrementAndGet();
-                } catch (Exception ignored) {
+                } catch (Throwable t) {
+                    workerErrors.add(t);
                 } finally {
                     completionGate.countDown();
                 }
@@ -624,7 +684,8 @@ public class TeamResilienceAndChaosStressTest {
                                     .content(objectMapper.writeValueAsString(req)))
                             .andReturn();
                     if (res.getResponse().getStatus() == 201) successCounter.incrementAndGet();
-                } catch (Exception ignored) {
+                } catch (Throwable t) {
+                    workerErrors.add(t);
                 } finally {
                     completionGate.countDown();
                 }
@@ -634,8 +695,12 @@ public class TeamResilienceAndChaosStressTest {
         startGate.countDown();
         boolean done = completionGate.await(15, TimeUnit.SECONDS);
         executor.shutdown();
+        if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+            executor.shutdownNow();
+        }
 
         assertThat(done).isTrue();
+        assertThat(workerErrors).isEmpty();
         assertThat(successCounter.get()).isEqualTo(additionsPerPlanner * 2);
 
         // 2 planners + 10 added officers = 12 members total
@@ -652,7 +717,7 @@ public class TeamResilienceAndChaosStressTest {
     @DisplayName("3.1 Audit Immutability: Verify @Immutable prevents direct alteration of audit records")
     void shouldEnforceAuditLogImmutabilityAndRejectDirectTampering() {
         authenticate(primarySupervisor);
-        TeamResponse team = teamService.createTeam(new CreateTeamRequest("Audit-Tamper-Team-" + UUID.randomUUID(), "Tamper verification"));
+        TeamResponse team = createTestTeam("Audit-Tamper-Team-" + UUID.randomUUID(), "Tamper verification");
 
         List<TeamAuditLog> logs = auditLogRepository.findAllByTeam_IdOrderByCreatedAtDesc(team.id());
         assertThat(logs).isNotEmpty();
@@ -695,7 +760,7 @@ public class TeamResilienceAndChaosStressTest {
     @DisplayName("3.2 Audit Preservation: Roster removal appends MEMBER_REMOVED audit log without destroying history")
     void shouldPreserveAuditLogsWhenMembersAreRemoved() throws Exception {
         authenticate(primarySupervisor);
-        TeamResponse team = teamService.createTeam(new CreateTeamRequest("Audit-Preserve-Team-" + UUID.randomUUID(), "Preserve test"));
+        TeamResponse team = createTestTeam("Audit-Preserve-Team-" + UUID.randomUUID(), "Preserve test");
 
         // 1. Add member
         teamService.addMember(team.id(), new AddTeamMemberRequest(fieldOperatorOfficer.getId(), TeamRole.FIELD_OPERATOR));
@@ -720,7 +785,7 @@ public class TeamResilienceAndChaosStressTest {
     @DisplayName("3.3 Audit Fetch Access Control: Non-authorized users and non-existent team IDs rejected")
     void shouldRejectUnauthorizedAuditLogFetches() throws Exception {
         authenticate(primarySupervisor);
-        TeamResponse team = teamService.createTeam(new CreateTeamRequest("Audit-Access-Team-" + UUID.randomUUID(), "Access control"));
+        TeamResponse team = createTestTeam("Audit-Access-Team-" + UUID.randomUUID(), "Access control");
 
         // 1. Field Operator attempting to view audit logs -> 403 Forbidden
         mockMvc.perform(get("/api/v1/teams/" + team.id() + "/audit")
@@ -790,7 +855,7 @@ public class TeamResilienceAndChaosStressTest {
         String teamName = "Service-Guard-Team-" + UUID.randomUUID();
 
         // First creation succeeds
-        teamService.createTeam(new CreateTeamRequest(teamName, "First instance"));
+        createTestTeam(teamName, "First instance");
 
         // Second creation with identical name is blocked by TeamService validation
         assertThatThrownBy(() -> teamService.createTeam(new CreateTeamRequest(teamName, "Second instance")))
@@ -808,6 +873,7 @@ public class TeamResilienceAndChaosStressTest {
         t1.setName(constrainedName);
         t1.setDescription("Base instance");
         teamRepository.saveAndFlush(t1);
+        createdTeamIds.add(t1.getId());
 
         Team t2 = new Team();
         t2.setName(constrainedName);
