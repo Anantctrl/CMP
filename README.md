@@ -699,7 +699,7 @@ Spring Boot reads environment variables from the OS/shell environment (it does n
      ./mvnw spring-boot:run
      ```
 
-   *The backend defaults to active profile `qa` (`application.yaml`), automatically connects to MySQL (`localhost:3306/copmap_auth`), PostgreSQL (`localhost:5432/copmap`), and Redis (`localhost:6379`), initializes schema tables (`ddl-auto: update`), and listens on **`http://localhost:8082`**.*
+   *The backend defaults to active profile `qa` (`application.yml`), automatically connects to MySQL (`localhost:3306/copmap_auth`), PostgreSQL (`localhost:5432/copmap`), and Redis (`localhost:6379`), initializes schema tables (`ddl-auto: update`), and listens on **`http://localhost:8082`**.*
 
 4. Verify backend health and documentation:
    - OpenAPI UI: **`http://localhost:8082/swagger-ui/index.html`**
