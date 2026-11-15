@@ -32,14 +32,11 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final AuthenticationSuccessHandler successHandler;
 
     public SecurityConfig(
-            JwtAuthenticationFilter jwtAuthenticationFilter,
-            AuthenticationSuccessHandler successHandler
+            JwtAuthenticationFilter jwtAuthenticationFilter
     ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-        this.successHandler = successHandler;
     }
 
     @Bean
@@ -65,11 +62,6 @@ public class SecurityConfig {
 
                         // All other URLs require authentication
                         .anyRequest().authenticated()
-                )
-
-                // OAuth2 Login
-                .oauth2Login(oauth2 ->
-                        oauth2.successHandler(successHandler)
                 )
 
                 // Disable default logout

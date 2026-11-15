@@ -23,18 +23,6 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
     show-sql: true
-  security:
-    #    oauth2 configurations
-    oauth2:
-      client:
-        registration:
-          github:
-            client-id: ${GITHUB_CLIENT_ID:test-client-id}
-            client-secret: ${GITHUB_CLIENT_SECRET:test-client-secret}
-            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-            scope:
-              - user:email
-              - read:user
 
 logging:
   level:

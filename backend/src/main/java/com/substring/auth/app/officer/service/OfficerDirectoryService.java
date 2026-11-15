@@ -36,8 +36,7 @@ public class OfficerDirectoryService {
     }
 
     @Cacheable(value = "officers_directory", key = "'all'")
-    @Transactional(transactionManager = "postgresTransactionManager")
-    public List<OfficerDirectoryDto> getAllOfficersCached() {
+    public synchronized List<OfficerDirectoryDto> getAllOfficersCached() {
         log.info("[REDIS CACHE MISS] Loading officer directory from database and populating Redis...");
         List<User> users = userRepository.findAll();
         List<OfficerDirectoryDto> list = new ArrayList<>();
@@ -45,15 +44,23 @@ public class OfficerDirectoryService {
         for (User user : users) {
             OfficerProfile profile = officerRepository.findByMysqlUserId(user.getId())
                     .orElseGet(() -> {
-                        OfficerProfile newProfile = new OfficerProfile();
-                        newProfile.setMysqlUserId(user.getId());
-                        newProfile.setOfficerName(user.getName());
-                        String desig = (user.getPolicePost() != null && !user.getPolicePost().isBlank())
-                                ? user.getPolicePost().trim()
-                                : "Officer";
-                        newProfile.setDesignation(desig);
-                        return officerRepository.save(newProfile);
+                        try {
+                            OfficerProfile newProfile = new OfficerProfile();
+                            newProfile.setMysqlUserId(user.getId());
+                            newProfile.setOfficerName(user.getName());
+                            String desig = (user.getPolicePost() != null && !user.getPolicePost().isBlank())
+                                    ? user.getPolicePost().trim()
+                                    : "Officer";
+                            newProfile.setDesignation(desig);
+                            return officerRepository.save(newProfile);
+                        } catch (Exception e) {
+                            return officerRepository.findByMysqlUserId(user.getId()).orElse(null);
+                        }
                     });
+
+            if (profile == null) {
+                continue;
+            }
 
             String roleName = user.getRole() != null ? user.getRole().getName() : "USER";
             list.add(new OfficerDirectoryDto(

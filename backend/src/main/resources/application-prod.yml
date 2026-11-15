@@ -25,18 +25,6 @@ spring:
         format_sql: false
     show-sql: false
 
-  security:
-    oauth2:
-      client:
-        registration:
-          github:
-            client-id: ${GITHUB_CLIENT_ID:test-client-id}
-            client-secret: ${GITHUB_CLIENT_SECRET:test-client-secret}
-            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-            scope:
-              - user:email
-              - read:user
-
 logging:
   level:
     root: INFO

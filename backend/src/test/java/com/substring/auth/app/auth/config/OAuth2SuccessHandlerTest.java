@@ -98,119 +98,18 @@ class OAuth2SuccessHandlerTest {
     }
 
     @Test
-    @DisplayName("GitHub Auth: Authenticate existing user matching stable GitHub ID")
-    void shouldAuthenticateUserByStableGithubProviderId() throws Exception {
+    @DisplayName("GitHub Auth Removed: Reject GitHub login as unsupported registration provider")
+    void shouldRejectGithubLoginAsUnsupported() throws Exception {
         when(authentication.getAuthorizedClientRegistrationId()).thenReturn("github");
-
-        String githubId = "github-stable-id-12345";
-        String email = "inspector@police.gov";
-
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put("id", githubId);
-        attributes.put("login", "inspector_sharma");
-        attributes.put("name", "Inspector Sharma");
-        attributes.put("avatar_url", "http://avatars.github.com/u/12345");
-        attributes.put("email", email);
-
-        when(oAuth2User.getAttributes()).thenReturn(attributes);
-
-        User existingUser = User.builder()
-                .id(UUID.randomUUID())
-                .email(email)
-                .name("Inspector Sharma")
-                .provider(Provider.GITHUB)
-                .providerId(githubId)
-                .enable(true)
-                .role(defaultRole)
-                .policePost("Field Officer")
-                .build();
-
-        when(userRepository.findByProviderAndProviderId(Provider.GITHUB, githubId)).thenReturn(Optional.of(existingUser));
-        when(userRepository.save(any(User.class))).thenReturn(existingUser);
-        when(jwtService.generateRefreshToken(any(), any())).thenReturn("mock-github-refresh-token");
-
-        oAuth2SuccessHandler.onAuthenticationSuccess(request, response, authentication);
-
-        verify(userRepository).findByProviderAndProviderId(Provider.GITHUB, githubId);
-        verify(cookieService).attachRefreshCookie(eq(response), eq("mock-github-refresh-token"), eq(86400));
-        verify(response).sendRedirect("http://localhost:5173/oauth/success");
-    }
-
-    @Test
-    @DisplayName("GitHub Auth: Register new user with stable GitHub ID")
-    void shouldRegisterNewUserWithGithubIdentity() throws Exception {
-        when(authentication.getAuthorizedClientRegistrationId()).thenReturn("github");
-
-        String githubId = "github-new-id-99999";
-        String email = "new.officer@police.gov";
-
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put("id", githubId);
-        attributes.put("login", "new_officer");
-        attributes.put("name", "New Officer");
-        attributes.put("avatar_url", "http://avatars.github.com/u/99999");
-        attributes.put("email", email);
-
-        when(oAuth2User.getAttributes()).thenReturn(attributes);
-        when(userRepository.findByProviderAndProviderId(Provider.GITHUB, githubId)).thenReturn(Optional.empty());
-        when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
-
-        User savedUser = User.builder()
-                .id(UUID.randomUUID())
-                .email(email)
-                .name("New Officer")
-                .provider(Provider.GITHUB)
-                .providerId(githubId)
-                .enable(true)
-                .role(defaultRole)
-                .build();
-
-        when(userRepository.save(any(User.class))).thenReturn(savedUser);
-        when(jwtService.generateRefreshToken(any(), any())).thenReturn("mock-new-refresh-token");
-
-        oAuth2SuccessHandler.onAuthenticationSuccess(request, response, authentication);
-
-        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).save(userCaptor.capture());
-        assertThat(userCaptor.getValue().getEmail()).isEqualTo(email);
-        assertThat(userCaptor.getValue().getProvider()).isEqualTo(Provider.GITHUB);
-        assertThat(userCaptor.getValue().getProviderId()).isEqualTo(githubId);
-
-        verify(response).sendRedirect("http://localhost:5173/oauth/success");
-    }
-
-    @Test
-    @DisplayName("Security: Reject disabled account during OAuth login")
-    void shouldRejectDisabledAccountDuringOAuthLogin() throws Exception {
-        when(authentication.getAuthorizedClientRegistrationId()).thenReturn("github");
-
-        String githubId = "github-disabled-user-777";
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put("id", githubId);
-        attributes.put("login", "disabled_officer");
-        attributes.put("email", "disabled@police.gov");
-
-        when(oAuth2User.getAttributes()).thenReturn(attributes);
-
-        User disabledUser = User.builder()
-                .id(UUID.randomUUID())
-                .email("disabled@police.gov")
-                .name("Disabled Officer")
-                .provider(Provider.GITHUB)
-                .providerId(githubId)
-                .enable(false) // Disabled
-                .role(defaultRole)
-                .build();
-
-        when(userRepository.findByProviderAndProviderId(Provider.GITHUB, githubId)).thenReturn(Optional.of(disabledUser));
-        when(userRepository.save(any(User.class))).thenReturn(disabledUser);
 
         oAuth2SuccessHandler.onAuthenticationSuccess(request, response, authentication);
 
         ArgumentCaptor<String> redirectCaptor = ArgumentCaptor.forClass(String.class);
         verify(response).sendRedirect(redirectCaptor.capture());
-        assertThat(redirectCaptor.getValue()).contains("User+account+is+disabled");
+        assertThat(redirectCaptor.getValue()).contains("http://localhost:5173/login?error=oauth_failed");
+        assertThat(redirectCaptor.getValue()).contains("Unsupported+OAuth2+registration+provider%3A+github");
 
         verify(jwtService, never()).generateRefreshToken(any(), any());
+        verify(cookieService, never()).attachRefreshCookie(any(), any(), anyInt());
     }
 }

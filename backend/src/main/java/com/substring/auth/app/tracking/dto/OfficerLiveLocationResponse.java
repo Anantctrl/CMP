@@ -1,11 +1,13 @@
 package com.substring.auth.app.tracking.dto;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.substring.auth.app.tracking.entity.OfficerLocationUpdate;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class")
 public record OfficerLiveLocationResponse(
         UUID officerId,
         String officerName,
