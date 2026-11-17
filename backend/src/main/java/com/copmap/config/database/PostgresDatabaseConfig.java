@@ -48,7 +48,8 @@ public class PostgresDatabaseConfig {
                 )
                 .persistenceUnit("postgres")
                 .properties(Map.of(
-                        "hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect"
+                        "hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect",
+                        "hibernate.hbm2ddl.auto", "update"
                 ))
                 .build();
     }

@@ -22,8 +22,11 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Configuration
 @EnableWebSecurity
@@ -153,13 +156,21 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource(
             @Value("${app.cors.front-end-url}") String corsUrls
     ) {
-        List<String> origins = Arrays.stream(corsUrls.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .toList();
+        Set<String> origins = new LinkedHashSet<>(
+                Arrays.stream(corsUrls.split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .toList()
+        );
+
+        // Always guarantee core local frontend origins (port 3000 and 5173) are allowed
+        origins.add("http://localhost:3000");
+        origins.add("http://127.0.0.1:3000");
+        origins.add("http://localhost:5173");
+        origins.add("http://127.0.0.1:5173");
 
         var config = new CorsConfiguration();
-        config.setAllowedOrigins(origins);
+        config.setAllowedOrigins(new ArrayList<>(origins));
         config.setAllowedMethods(
                 List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD")
         );

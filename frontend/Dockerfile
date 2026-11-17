@@ -27,6 +27,9 @@ FROM nginx:alpine
 # Remove default Nginx website
 RUN rm -rf /usr/share/nginx/html/*
 
+# Copy custom Nginx SPA routing config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # Copy production build
 COPY --from=build /app/dist /usr/share/nginx/html
 
