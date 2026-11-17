@@ -179,7 +179,7 @@ function Signup() {
               </div>
 
               {/* Supervisor Privilege Checkbox */}
-              <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-xl border border-border/80 cursor-pointer">
+              <label htmlFor="supervisor" className="flex items-start space-x-3 p-3 bg-muted/50 rounded-xl border border-border/80 cursor-pointer select-none">
                 <input
                   id="supervisor"
                   type="checkbox"
@@ -188,16 +188,16 @@ function Signup() {
                   onChange={handleCheckboxChange}
                   className="w-4 h-4 mt-0.5 rounded border-border text-primary focus:ring-primary cursor-pointer shrink-0"
                 />
-                <div className="flex flex-col select-none" onClick={() => setData(v => ({ ...v, supervisor: !v.supervisor }))}>
-                  <Label htmlFor="supervisor" className="text-xs sm:text-sm font-bold cursor-pointer flex items-center gap-1.5">
+                <div className="flex flex-col">
+                  <span className="text-xs sm:text-sm font-bold flex items-center gap-1.5 text-foreground cursor-pointer">
                     <ShieldAlert className="w-3.5 h-3.5 text-primary shrink-0" />
                     Register as Supervisor
-                  </Label>
+                  </span>
                   <span className="text-[11px] sm:text-xs text-muted-foreground leading-snug mt-0.5">
                     Grants command-level authority, team creation, and operation approvals
                   </span>
                 </div>
-              </div>
+              </label>
 
               <Button
                 type="submit"

@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -63,7 +64,11 @@ public class UserServiceImpl implements UserService {
                             || "Administrator".equalsIgnoreCase(a.getAuthority())
                             || "ROLE_Administrator".equalsIgnoreCase(a.getAuthority()));
 
-            if (isAuthorizedCaller || auth == null || !auth.isAuthenticated()) {
+            boolean isAnonymous = auth == null || !auth.isAuthenticated()
+                    || auth instanceof AnonymousAuthenticationToken
+                    || "anonymousUser".equals(auth.getPrincipal());
+
+            if (isAuthorizedCaller || isAnonymous) {
                 Role supervisorRole = roleRepository.findByName("Supervisor")
                         .orElseGet(() -> {
                             Role r = new Role();

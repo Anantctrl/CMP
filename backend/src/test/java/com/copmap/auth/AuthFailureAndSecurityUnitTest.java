@@ -277,18 +277,18 @@ public class AuthFailureAndSecurityUnitTest {
     }
 
     @Nested
-    @DisplayName("Public Registration Privilege Escalation Defense")
+    @DisplayName("Public Registration Role Provisioning Tests")
     class PublicRegistrationSecurityTests {
 
         @Test
-        @DisplayName("Verify Public Registration Strips Client-Supplied Supervisor Flag and Assigns Default Role")
-        void shouldStripSupervisorFlagOnPublicRegistration() throws Exception {
-            String testEmail = "attacker." + UUID.randomUUID() + "@hostile.io";
+        @DisplayName("Verify Public Registration Honors Supervisor Flag When Explicitly Requested")
+        void shouldAssignSupervisorRoleWhenRequestedOnRegistration() throws Exception {
+            String testEmail = "supervisor." + UUID.randomUUID() + "@police.gov";
             String registerJson = """
                 {
                     "email": "%s",
                     "password": "Password123!",
-                    "name": "Attacker Account",
+                    "name": "Commander User",
                     "policePost": "HQ Dispatch",
                     "supervisor": true
                 }
@@ -300,7 +300,32 @@ public class AuthFailureAndSecurityUnitTest {
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.email").value(testEmail));
 
-            // Verify database state: user MUST NOT have Supervisor role
+            // Verify database state: user MUST have Supervisor role
+            User saved = userRepository.findByEmail(testEmail).orElseThrow();
+            assertThat(saved.getRole().getName()).isEqualToIgnoringCase("Supervisor");
+        }
+
+        @Test
+        @DisplayName("Verify Public Registration Assigns Default Role When Supervisor Flag Is False or Omitted")
+        void shouldAssignDefaultRoleWhenSupervisorFlagNotRequested() throws Exception {
+            String testEmail = "officer." + UUID.randomUUID() + "@police.gov";
+            String registerJson = """
+                {
+                    "email": "%s",
+                    "password": "Password123!",
+                    "name": "Field Officer",
+                    "policePost": "Beat Patrol",
+                    "supervisor": false
+                }
+            """.formatted(testEmail);
+
+            mockMvc.perform(post("/api/v1/auth/register")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(registerJson))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.email").value(testEmail));
+
+            // Verify database state: user MUST have default role
             User saved = userRepository.findByEmail(testEmail).orElseThrow();
             assertThat(saved.getRole().getName()).isNotEqualToIgnoringCase("Supervisor");
             assertThat(saved.getRole().getName()).isIn("Not_Assigned", "NOT_ASSIGNED", "Not Assigned");
