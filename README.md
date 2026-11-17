@@ -631,9 +631,6 @@ This provisions:
 - `copmap-postgres` on host port **`127.0.0.1:5432`** with database `copmap` (user `copmap_app`)
 - `copmap-redis` on host port **`127.0.0.1:6379`** for directory and live telemetry caching
 
-> [!NOTE]
-> **Host Port Conflicts**: If you already have a native MySQL instance running on host port 3306, you can either stop the local service (`net stop MySQL80` on Windows, or `sudo systemctl stop mysql` on Linux) or map Compose to port 3307 in `compose.yaml` (`"127.0.0.1:3307:3306"`) and set `MYSQL_URL=jdbc:mysql://localhost:3307/copmap_auth` in your backend shell.
-
 ---
 
 ### 7.5 Step 3: Backend Setup & Execution (Port 8082)
