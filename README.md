@@ -33,7 +33,7 @@
    - [7.1 Fast-Track Quickstart (Full Docker Stack)](#71-fast-track-quickstart-full-docker-stack)
    - [7.2 System Prerequisites](#72-system-prerequisites)
    - [7.3 Step 1: Environment Configuration (`.env`)](#73-step-1-environment-configuration-env)
-   - [7.4 Step 2: Database & Cache Provisioning (Docker Compose or Native)](#74-step-2-database--cache-provisioning-docker-compose-or-native)
+   - [7.4 Step 2: Database & Cache Provisioning (Docker Compose)](#74-step-2-database--cache-provisioning-docker-compose)
    - [7.5 Step 3: Backend Setup & Execution (Port 8082)](#75-step-3-backend-setup--execution-port-8082)
    - [7.6 Step 4: Frontend Setup & Execution (Port 5173)](#76-step-4-frontend-setup--execution-port-5173)
    - [7.7 Step 5: Verification & Testing (155 Unit/Integration/Chaos Tests + Newman)](#77-step-5-verification--testing-155-unitintegrationchaos-tests--newman)
@@ -580,8 +580,7 @@ docker compose up -d --build
 ### 7.2 System Prerequisites (For Local / Native Execution)
 - **Java**: OpenJDK 21 or higher (`java -version`)
 - **Node.js**: v20.x or higher with `npm` (`node -v`)
-- **Docker & Docker Compose** (Recommended for databases & cache)  
-  *Or native installations of: MySQL 8.4 on port 3306, PostgreSQL 16 on port 5432, and Redis 7 on port 6379.*
+- **Docker & Docker Compose** (Required for databases & cache)
 
 ---
 
@@ -592,9 +591,40 @@ docker compose up -d --build
 
 In the repository root, create `.env` from the template:
 
+<<<<<<< HEAD
 ### 7.4 Step 2: Database & Cache Provisioning (Docker Compose or Native)
+=======
+```bash
+# macOS / Linux
+cp .env.example .env
 
-#### Option A: Docker Compose Services (Recommended)
+# Windows PowerShell
+Copy-Item .env.example .env
+```
+
+The default values in `.env` are pre-configured for local development (`qa` profile):
+```env
+# Database Credentials
+MYSQL_ROOT_PASSWORD=mysql
+MYSQL_USER=root
+MYSQL_PASSWORD=mysql
+POSTGRES_USER=copmap_app
+POSTGRES_PASSWORD=localdev123
+
+# Security & JWT
+JWT_SECRET=ekqSbKMKgO507t7QvNUz7tXRmlv/eo0YZUkwpFXYKkcsIgJ2e0VsVeelnzX+oUho
+JWT_ISSUER=api.copmap.gov
+
+# Tactical Frontend
+FRONT_END_URL=http://localhost:5173,http://localhost:3000
+DEV_SEED_PASSWORD=Password@123
+```
+
+---
+
+### 7.4 Step 2: Database & Cache Provisioning (Docker Compose)
+>>>>>>> 83e48ce (docs(readme): remove native database setup instructions to focus on docker compose)
+
 From the repository root, pull dependencies and launch the three data stores in detached mode:
 ```bash
 docker compose pull
@@ -607,23 +637,6 @@ This provisions:
 
 > [!NOTE]
 > **Host Port Conflicts**: If you already have a native MySQL instance running on host port 3306, you can either stop the local service (`net stop MySQL80` on Windows, or `sudo systemctl stop mysql` on Linux) or map Compose to port 3307 in `compose.yaml` (`"127.0.0.1:3307:3306"`) and set `MYSQL_URL=jdbc:mysql://localhost:3307/copmap_auth` in your backend shell.
-
-#### Option B: Native Services Setup
-If running databases natively without Docker:
-1. **MySQL 8.4** (Port 3306):
-   ```sql
-   CREATE DATABASE IF NOT EXISTS copmap_auth;
-   ```
-2. **PostgreSQL 16** (Port 5432):
-   ```sql
-   CREATE DATABASE copmap;
-   CREATE USER copmap_app WITH ENCRYPTED PASSWORD 'localdev123';
-   GRANT ALL PRIVILEGES ON DATABASE copmap TO copmap_app;
-   ```
-3. **Redis 7** (Port 6379):
-   ```bash
-   redis-server --port 6379
-   ```
 
 ---
 
