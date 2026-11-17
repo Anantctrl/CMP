@@ -591,9 +591,6 @@ docker compose up -d --build
 
 In the repository root, create `.env` from the template:
 
-<<<<<<< HEAD
-### 7.4 Step 2: Database & Cache Provisioning (Docker Compose or Native)
-=======
 ```bash
 # macOS / Linux
 cp .env.example .env
@@ -623,7 +620,6 @@ DEV_SEED_PASSWORD=Password@123
 ---
 
 ### 7.4 Step 2: Database & Cache Provisioning (Docker Compose)
->>>>>>> 83e48ce (docs(readme): remove native database setup instructions to focus on docker compose)
 
 From the repository root, pull dependencies and launch the three data stores in detached mode:
 ```bash
