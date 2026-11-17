@@ -35,7 +35,7 @@
    - [7.3 Step 1: Environment Configuration (`.env`)](#73-step-1-environment-configuration-env)
    - [7.4 Step 2: Database & Cache Provisioning (Docker Compose)](#74-step-2-database--cache-provisioning-docker-compose)
    - [7.5 Step 3: Backend Setup & Execution (Port 8082)](#75-step-3-backend-setup--execution-port-8082)
-   - [7.6 Step 4: Frontend Setup & Execution (Port 5173)](#76-step-4-frontend-setup--execution-port-5173)
+   - [7.6 Step 4: Frontend Setup & Execution (Port 3000)](#76-step-4-frontend-setup--execution-port-3000)
    - [7.7 Step 5: Verification & Testing (155 Unit/Integration/Chaos Tests + Newman)](#77-step-5-verification--testing-155-unitintegrationchaos-tests--newman)
 
 ---
@@ -90,7 +90,7 @@ flowchart TB
     Client["Client / Browser (React 19) / Mobile / Postman"]
     
     subgraph SecurityGateway["Spring Security Gateway (Port 8082)"]
-        Cors["CORS Configuration (Port 5173 Allowed)"]
+        Cors["CORS Configuration (Port 3000 Allowed)"]
         JwtFilter["JwtAuthenticationFilter.java<br/>(Extracts Bearer Token / Cookie)"]
         SecurityConfig["SecurityConfig.java<br/>(Stateless Session, RBAC Method Security)"]
     end
@@ -659,7 +659,7 @@ Spring Boot reads environment variables from the OS/shell environment (it does n
    - **Windows PowerShell**:
      ```powershell
      $env:SPRING_PROFILES_ACTIVE = "qa"
-     $env:JWT_SECRET = "ekqSbKMKgO507t7QvNUz7tXRmlv/eo0YZUkwpFXYKkcsIgJ2e0VsVeelnzX+oUho"
+     $env:JWT_SECRET = "---------o"
      .\mvnw.cmd spring-boot:run
      ```
      *(Or import all `.env` values directly into your PowerShell session)*:
@@ -688,7 +688,7 @@ Spring Boot reads environment variables from the OS/shell environment (it does n
 
 ---
 
-### 7.6 Step 4: Frontend Setup & Execution (Port 5173)
+### 7.6 Step 4: Frontend Setup & Execution (Port 3000)
 
 1. In a new terminal, navigate to the frontend directory:
    ```bash
@@ -706,7 +706,7 @@ Spring Boot reads environment variables from the OS/shell environment (it does n
    ```
 
 4. Access the tactical command interface in your browser:
-   - **`http://localhost:5173`**
+   - **`http://localhost:3000`**
    - Login with pre-seeded credentials or register a new officer account.
 
 ---
